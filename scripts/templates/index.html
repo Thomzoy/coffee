@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HX711 Live Plot</title>
+    <style>
+        canvas { border: 1px solid #333; background: #f8f8f8; }
+    </style>
+</head>
+<body>
+    <h2>HX711 Live Data</h2>
+    <canvas id="plot" width="1600" height="800"></canvas>
+
+    <script>
+        const canvas = document.getElementById('plot');
+        const ctx = canvas.getContext('2d');
+        const maxPoints = 100;
+        const data = Array(maxPoints).fill(0);
+
+        const yMin = -2000;
+        const yMax = 2000;
+
+        // Draw y-axis with labels
+        function drawYAxis() {
+            ctx.beginPath();
+            ctx.strokeStyle = '#000';
+            ctx.moveTo(40, 0); // y-axis line
+            ctx.lineTo(40, canvas.height);
+            ctx.stroke();
+
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            const steps = 10;
+            for (let i = 0; i <= steps; i++) {
+                const yValue = yMin + (i * (yMax - yMin) / steps);
+                const yPos = canvas.height - (i * canvas.height / steps);
+                ctx.fillText(Math.round(yValue), 0, yPos + 3);
+                ctx.beginPath();
+                ctx.moveTo(35, yPos);
+                ctx.lineTo(40, yPos);
+                ctx.stroke();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawYAxis();
+
+            ctx.beginPath();
+            const xStep = (canvas.width - 40) / maxPoints;
+            const yScale = canvas.height / (yMax - yMin);
+
+            for (let i = 0; i < data.length; i++) {
+                const x = 40 + i * xStep;
+                const y = canvas.height - ((data[i] - yMin) * yScale);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        async function update() {
+            const response = await fetch('/data');
+            const json = await response.json();
+            data.push(json.value);
+            data.shift(); // remove oldest
+            draw();
+        }
+
+        setInterval(update, 50); // update every 50ms
+    </script>
+</body>
+</html>

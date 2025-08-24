@@ -1,24 +1,24 @@
-from mcp23017 import *
-from mcp23017.i2c import I2C
+from typing import Callable, List, Optional
+
 import smbus
 from gpiozero import Button, Device
 from gpiozero.pins.pigpio import PiGPIOFactory
-from signal import pause
-import time
+from mcp23017 import *
+from mcp23017.i2c import I2C
 
 Device.pin_factory = PiGPIOFactory()
+
 
 class MultiPlex:
     def __init__(
         self,
         address: int = 0x20,
         interrupt_pin: int = 4,
-        button_callback = None, # signature: f(button_id)
+        button_callback: Optional[Callable[[int], None]] = None,
     ):
-
         self.button = Button(interrupt_pin, pull_up=True, bounce_time=0.2)
         self.i2c = I2C(smbus.SMBus(1))
-        self.mcp = MCP23017(0x20, self.i2c.bus)
+        self.mcp = MCP23017(address, self.i2c.bus)
 
         # Set all as input
         self.mcp.set_all_input()
@@ -50,7 +50,9 @@ class MultiPlex:
 
         self.button.when_pressed = self.interrupt_callback
 
-    def get_pressed_button_id(self, flags_a, flags_b):
+    def get_pressed_button_id(
+        self, flags_a: List[str], flags_b: List[str]
+    ) -> Optional[int]:
         flags = flags_a + flags_b
         try:
             return flags.index("1")
@@ -72,5 +74,5 @@ class MultiPlex:
         if (pressed_id is not None) and self.button_callback is not None:
             self.button_callback(pressed_id)
 
-    def set_button_callback(self, button_callback):
+    def set_button_callback(self, button_callback: Optional[Callable[[int], None]]):
         self.button_callback = button_callback

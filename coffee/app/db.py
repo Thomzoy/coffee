@@ -1,9 +1,10 @@
 import sqlite3
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Union
+
 
 class Database:
-    def __init__(self, db_name="app_data.db"):
+    def __init__(self, db_name: str = "app_data.db"):
         self.db_name = db_name
         self.conn = None  # Will be initialized in __enter__
 
@@ -43,20 +44,26 @@ class Database:
         """Insert a user record."""
         dt = dt or datetime.now()
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO user (button_id, name, datetime)
             VALUES (?, ?, ?)
-        """, (button_id, name, dt.isoformat()))
+        """,
+            (button_id, name, dt.isoformat()),
+        )
         self.conn.commit()
 
     def add_mug(self, button_id: int, value: float, dt: datetime = None):
         """Insert a mug record."""
         dt = dt or datetime.now()
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO mug (button_id, value, datetime)
             VALUES (?, ?, ?)
-        """, (button_id, value, dt.isoformat()))
+        """,
+            (button_id, value, dt.isoformat()),
+        )
         self.conn.commit()
 
     def get_mugs(self, identifier: Union[int, str]) -> List[dict]:
@@ -68,26 +75,34 @@ class Database:
 
         if isinstance(identifier, int):
             # Query by button_id
-            cursor.execute("SELECT button_id, value, datetime FROM mug WHERE button_id = ?", (identifier,))
+            cursor.execute(
+                "SELECT button_id, value, datetime FROM mug WHERE button_id = ?",
+                (identifier,),
+            )
         elif isinstance(identifier, str):
             # Query by user name (join with user table)
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT m.button_id, m.value, m.datetime
                 FROM mug m
                 JOIN user u ON m.button_id = u.button_id
                 WHERE u.name = ?
-            """, (identifier,))
+            """,
+                (identifier,),
+            )
         else:
             raise ValueError("Identifier must be an int (button_id) or str (name).")
 
         rows = cursor.fetchall()
         result = []
         for button_id, value, dt_str in rows:
-            result.append({
-                "button_id": button_id,
-                "value": value,
-                "datetime": datetime.fromisoformat(dt_str)
-            })
+            result.append(
+                {
+                    "button_id": button_id,
+                    "value": value,
+                    "datetime": datetime.fromisoformat(dt_str),
+                }
+            )
 
         return result
 
@@ -97,16 +112,18 @@ class Database:
         Returns str(button_id) if no user is found.
         """
         cursor = self.conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT name
             FROM user
             WHERE button_id = ?
             ORDER BY datetime(datetime) DESC
             LIMIT 1
-        """, (button_id,))
+        """,
+            (button_id,),
+        )
         row = cursor.fetchone()
         return row[0] if row else str(button_id)
-
 
     def close(self):
         """Close the database connection."""

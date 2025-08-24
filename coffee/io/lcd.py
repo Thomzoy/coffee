@@ -1,9 +1,11 @@
-from lcd.i2c_lcd import I2cLcd
-import time
 import threading
-import wrapt
+import time
 
-from .config import CUSTOM_CHARS
+import wrapt
+from lcd.i2c_lcd import I2cLcd
+
+from coffee.config import CUSTOM_CHARS
+
 
 @wrapt.decorator
 def single_lcd_write(wrapped, instance, args, kwargs):
@@ -19,6 +21,7 @@ def single_lcd_write(wrapped, instance, args, kwargs):
         instance.stop_event.clear()
 
     return wrapped(*args, **kwargs)
+
 
 class LCD(I2cLcd):
     def __init__(
@@ -37,7 +40,7 @@ class LCD(I2cLcd):
 
     def register_custom_characters(self):
         for idx, (name, array) in enumerate(CUSTOM_CHARS.items()):
-            if idx < 8: # 8 addresses available
+            if idx < 8:  # 8 addresses available
                 self.custom_char(idx, array)
 
     def check_thread(self):
@@ -50,8 +53,8 @@ class LCD(I2cLcd):
         self.stop_event.clear()
 
     @single_lcd_write
-    def scroll_message(self, message, row=0, sleep=0.5):
-        #self.check_thread()
+    def scroll_message(self, message: str, row: int = 0, sleep: float = 0.5):
+        # self.check_thread()
 
         # Start a new scrolling thread
         def worker():
@@ -61,7 +64,7 @@ class LCD(I2cLcd):
             self.move_to(0, row)
 
             n = 15
-            tmp_message = (n+1)*" " + message + (n+1)*" "
+            tmp_message = (n + 1) * " " + message + (n + 1) * " "
 
             for idx in range(n + 2 + len(message)):
                 if self.stop_event.is_set():
@@ -69,7 +72,7 @@ class LCD(I2cLcd):
                     break  # Stop immediately if a new message comes in
 
                 self.move_to(0, row)
-                self.putstr(tmp_message[idx: idx+n])
+                self.putstr(tmp_message[idx : idx + n])
                 time.sleep(sleep)
 
         self.lcd_thread = threading.Thread(target=worker, daemon=True)
@@ -77,17 +80,17 @@ class LCD(I2cLcd):
 
     @single_lcd_write
     def blink(self, interval: float = 0.5, n: int = -1):
-        #self.check_thread()
+        # self.check_thread()
         def worker():
-            self.move_to(0,0)
+            self.move_to(0, 0)
             self.putstr("Service ...")
-            idx  = 0
+            idx = 0
             while True:
                 if self.stop_event.is_set() or ((n > 0) and (idx >= n)):
                     self.backlight_on()
                     print("Done blink")
                     break
-                self.backlight_on() if idx%2 else self.backlight_off()
+                self.backlight_on() if idx % 2 else self.backlight_off()
                 idx += 1
                 time.sleep(interval)
 

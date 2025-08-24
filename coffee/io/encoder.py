@@ -1,12 +1,21 @@
+from typing import Callable, Optional
+
 from gpiozero import Button, Device
 from gpiozero.pins.pigpio import PiGPIOFactory
 
 Device.pin_factory = PiGPIOFactory()
 
+
 class Encoder:
     def __init__(
-        self, clk_pin, data_pin, encoder_button_pin=None, red_button_pin=None, 
-        encoder_callback=None, encoder_button_callback=None, red_button_callback=None,
+        self,
+        clk_pin: int,
+        data_pin: int,
+        encoder_button_pin: Optional[int] = None,
+        red_button_pin: Optional[int] = None,
+        encoder_callback: Optional[Callable[[bool], None]] = None,
+        encoder_button_callback: Optional[Callable[[], None]] = None,
+        red_button_callback: Optional[Callable[[], None]] = None,
     ):
         # Rotary encoder pins (pulldown)
         self.clk_pin = Button(clk_pin, pull_up=False)
@@ -28,7 +37,9 @@ class Encoder:
         self.red_button = None
 
         if encoder_button_pin is not None:
-            self.encoder_button = Button(encoder_button_pin, pull_up=True, bounce_time=0.05)
+            self.encoder_button = Button(
+                encoder_button_pin, pull_up=True, bounce_time=0.05
+            )
             if encoder_button_callback:
                 self.encoder_button.when_pressed = lambda: encoder_button_callback()
 
@@ -59,11 +70,15 @@ class Encoder:
     def get_value(self):
         return self.value
 
-    def set_encoder_callback(self, encoder_callback):
+    def set_encoder_callback(self, encoder_callback: Optional[Callable[[bool], None]]):
         self.encoder_callback = encoder_callback
 
-    def set_encoder_button_callback(self, encoder_button_callback):
+    def set_encoder_button_callback(
+        self, encoder_button_callback: Optional[Callable[[], None]]
+    ):
         self.encoder_button_callback = encoder_button_callback
 
-    def set_red_button_callback(self, encoder_callback):
+    def set_red_button_callback(
+        self, red_button_callback: Optional[Callable[[], None]]
+    ):
         self.red_button_callback = red_button_callback

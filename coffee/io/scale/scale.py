@@ -1,26 +1,24 @@
-from collections import deque
-import threading
-import time
-import signal
 import statistics
-
-from typing import Literal
+import threading
+from collections import deque
+from typing import Any, Callable, Literal, Optional
 
 from .hx711 import HX711
 
 MODES = ["COFFEE_POT_ON", "COFFEE_POT_OFF"]
 
+
 class Scale:
     def __init__(
         self,
-        data_pin: int=17,
-        clock_pin: int=27,
-        max_readings: int=3,
-        smoothing_window: int=3,
-        smoothing_method: Literal["mean","median"] = "median",
-        reference_unit: float=305.834,
-        served_mug_callback = None,
-        removed_pot_callback = None,
+        data_pin: int = 17,
+        clock_pin: int = 27,
+        max_readings: int = 3,
+        smoothing_window: int = 3,
+        smoothing_method: Literal["mean", "median"] = "median",
+        reference_unit: float = 305.834,
+        served_mug_callback: Optional[Callable[[float], Any]] = None,
+        removed_pot_callback: Optional[Callable[[], Any]] = None,
     ):
         self.weight_buffer = deque(maxlen=max_readings)
         self.buffer_lock = threading.Lock()
@@ -29,10 +27,10 @@ class Scale:
         self.smoothing_window = smoothing_window
         self.smoothing_method = smoothing_method
 
-        self.served_mug_callback = served_mug_callback
-        self.removed_pot_callback = removed_pot_callback
+        self.served_mug_callback: Optional[Callable[[float], Any]] = served_mug_callback
+        self.removed_pot_callback: Optional[Callable[[], Any]] = removed_pot_callback
 
-        self.hx = HX711(17, 27)
+        self.hx = HX711(data_pin, clock_pin)
         self.hx.setReferenceUnit(reference_unit)
         self.hx.setReadingFormat("MSB", "MSB")
         self.hx.autosetOffset()
@@ -41,36 +39,37 @@ class Scale:
         self.update_mug_value = False
         self.stable_value = 0
         self.mug_value = 0
-    
+
     def start_reading(self):
         """Start the sensor reading thread"""
         if self.running:
             return
-        
+
         self.running = True
-        self.sensor_thread = threading.Thread(target=self._read_sensor_loop, daemon=True)
+        self.sensor_thread = threading.Thread(
+            target=self._read_sensor_loop, daemon=True
+        )
         self.sensor_thread.start()
-    
+
     def stop_reading(self):
         """Stop the sensor reading thread"""
         self.running = False
         if self.sensor_thread:
             self.sensor_thread.join()
-    
+
     def _read_sensor_loop(self):
         """Background thread that reads sensor every second"""
         while self.running:
             try:
                 # Replace this with your actual sensor reading code
                 weight = self.read_sensor_value()
-                
+
                 with self.buffer_lock:
                     self.weight_buffer.append(weight)
-                
+
             except Exception as e:
                 print(f"Sensor reading error: {e}")
 
-    
     def read_sensor_value(self):
         values = [self.hx.getWeight() for _ in range(self.smoothing_window)]
         if self.smoothing_method == "mean":
@@ -92,15 +91,17 @@ class Scale:
             # Big positive weight difference: pot is back
             print(f"Pot is back - Delta: {delta:.1f}")
             self.has_pot = True
-            self.update_mug_value = True # Update mug weight value with next stable reading
+            self.update_mug_value = (
+                True  # Update mug weight value with next stable reading
+            )
 
         if self.has_pot:
             readings = self.get_last_readings() + [value]
-            std = statistics.stdev(readings) if len(readings)>=2 else None
-            #print(f"Has pot, STD: {std}")
+            std = statistics.stdev(readings) if len(readings) >= 2 else None
+            # print(f"Has pot, STD: {std}")
             if (std is not None) and (std <= 10):
                 new_stable_value = statistics.mean(readings)
-                #print(f"New stable value: {new_stable_value}")
+                # print(f"New stable value: {new_stable_value}")
                 if self.update_mug_value:
                     self.mug_value = self.stable_value - new_stable_value
                     print(f"Mug {self.mug_value}")
@@ -117,7 +118,7 @@ class Scale:
         """Get the last N readings (thread-safe)"""
         with self.buffer_lock:
             return list(self.weight_buffer)[:]
-    
+
     def get_latest_reading(self):
         """Get just the most recent reading"""
         with self.buffer_lock:

@@ -1,12 +1,11 @@
-from lcd.i2c_lcd import I2cLcd
-from time import sleep, time
-import threading
-
-from .page import Page, BasePage, PersonPage, MugPage
-from .config import CUSTOM_CHARS
-from .lcd import LCD
+from time import time
+from typing import Optional
 
 import wrapt
+
+from coffee.io.lcd import LCD
+
+from .page import BasePage, MugPage, Page
 
 
 @wrapt.decorator
@@ -25,13 +24,14 @@ def set_page(wrapped, instance, args, kwargs):
 
     return page
 
+
 class LCDApp:
     def __init__(
         self,
         address: int = 0x27,
-        width: int = 16,
         rows: int = 2,
-        page: Page = None,
+        width: int = 16,
+        page: Optional[Page] = None,
         timeout: int = 15,
     ):
         self.lcd = LCD(1, address, rows, width)
@@ -59,7 +59,7 @@ class LCDApp:
         print(f"Encoder - Clockwise {clockwise} - Page {self.page.__class__.__name__}")
         return self.page.encoder_callback(clockwise)
 
-    @set_page    
+    @set_page
     def encoder_button_callback(self):
         print(f"Encoder button - Page {self.page.__class__.__name__}")
         return self.page.encoder_button_callback()
@@ -71,7 +71,9 @@ class LCDApp:
 
     @set_page
     def person_button_callback(self, button_id):
-        print(f"Person button callback - ID {button_id} - Page {self.page.__class__.__name__}")
+        print(
+            f"Person button callback - ID {button_id} - Page {self.page.__class__.__name__}"
+        )
         return self.page.person_button_callback(button_id)
 
     @set_page

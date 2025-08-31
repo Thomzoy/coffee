@@ -3,6 +3,8 @@ from typing import Callable, Optional
 from gpiozero import Button, Device
 from gpiozero.pins.pigpio import PiGPIOFactory
 
+from coffee.app.page import Page
+
 Device.pin_factory = PiGPIOFactory()
 
 
@@ -13,9 +15,9 @@ class Encoder:
         data_pin: int,
         encoder_button_pin: Optional[int] = None,
         red_button_pin: Optional[int] = None,
-        encoder_callback: Optional[Callable[[bool], None]] = None,
-        encoder_button_callback: Optional[Callable[[], None]] = None,
-        red_button_callback: Optional[Callable[[], None]] = None,
+        encoder_callback: Optional[Callable[[bool], Page | None]] = None,
+        encoder_button_callback: Optional[Callable[[], Page | None]] = None,
+        red_button_callback: Optional[Callable[[], Page | None]] = None,
     ):
         # Rotary encoder pins (pulldown)
         self.clk_pin = Button(clk_pin, pull_up=False)
@@ -70,15 +72,17 @@ class Encoder:
     def get_value(self):
         return self.value
 
-    def set_encoder_callback(self, encoder_callback: Optional[Callable[[bool], None]]):
+    def set_encoder_callback(
+        self, encoder_callback: Optional[Callable[[bool], Page | None]]
+    ):
         self.encoder_callback = encoder_callback
 
     def set_encoder_button_callback(
-        self, encoder_button_callback: Optional[Callable[[], None]]
+        self, encoder_button_callback: Optional[Callable[[], Page | None]]
     ):
         self.encoder_button_callback = encoder_button_callback
 
     def set_red_button_callback(
-        self, red_button_callback: Optional[Callable[[], None]]
+        self, red_button_callback: Optional[Callable[[], Page | None]]
     ):
         self.red_button_callback = red_button_callback

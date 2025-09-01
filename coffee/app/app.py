@@ -32,7 +32,6 @@ def set_page(
     # Call the original method
     page = wrapped(*args, **kwargs)
 
-    # Only proceed if this is an instance method
     if page is not None:
         instance.lcd.display_on()
         instance.lcd.backlight_on()
@@ -112,24 +111,15 @@ class LCDApp:
         self.lcd.clear()
         self.page.display()
 
-    def turn_off(self):
-        if self.is_on:
-            self.lcd.clear()
-            self.lcd.display_off()
-            self.lcd.backlight_off()
-            self.is_on = False
-
     def check_timeout(self):
         """Check if the current page has timed out and reset to base page if needed."""
         if int(time()) - self.last_update >= self.timeout:
+            self.page.timeout_callback()
             if not isinstance(self.page, BasePage):
                 print("Timeout")
-                self.page.timeout_callback()
-                self.turn_off()
+                self.lcd.turn_off()
                 self.page = BasePage().set_lcd(self.lcd)
                 self.page.display()
-            else:
-                self.turn_off()
 
     @set_page
     def encoder_callback(self, clockwise: bool):

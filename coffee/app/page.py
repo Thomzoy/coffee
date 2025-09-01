@@ -1,6 +1,7 @@
 import time
+import os
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 
 from coffee.config import CUSTOM_CHARS_IDX
 from coffee.io.lcd import LCD, single_lcd_write
@@ -81,6 +82,7 @@ class BasePage(Page):
 
     def __init__(self):
         super().__init__()
+        self.has_timeout = False
 
     @single_lcd_write
     def display(self):
@@ -92,6 +94,11 @@ class BasePage(Page):
 
     def person_button_callback(self, button_id: int) -> Optional["Page"]:
         return PersonPage(button_id)
+
+    def timeout_callback(self) -> Optional["Page"]:
+        if not self.has_timeout:
+            self.has_timeout = True
+            self.lcd.turn_off()
 
 
 class NameButtonPage(Page):
@@ -186,7 +193,7 @@ class MugPage(Page):
     def display(self):
         if self.mug_value is None:
             # Pot is removed
-            self.lcd.blink()
+            self.lcd.blink("Service...")
 
         else:
             self.lcd.move_to(0, 0)
@@ -202,10 +209,11 @@ class MugPage(Page):
         self.person_ids.append(str(button_id))
 
     def encoder_button_callback(self) -> Optional["Page"]:
-        with Database() as db:
-            for person_id in self.person_ids:
-                db.add_mug(person_id, self.mug_value / len(self.person_ids))
-        self.display_temporary("OK !")
+        if self.mug_value is not None:
+            with Database() as db:
+                for person_id in self.person_ids:
+                    db.add_mug(person_id, self.mug_value / len(self.person_ids))
+            self.display_temporary("OK !", duration=2)
         return BasePage()
 
     def red_button_callback(self) -> Optional["Page"]:
@@ -221,6 +229,20 @@ class MugPage(Page):
         if self.person_ids:
             self.encoder_button_callback()
 
+class ShutdownPage(Page):
+
+    def __init__(self, restart: bool=False):
+        self.restart = restart
+
+    @single_lcd_write
+    def display(self):
+        if self.restart:
+            self.display_temporary("Restart ...", duration=2)
+            os.system("sudo shutdown -r now")
+        else:    
+            self.display_temporary("Shutdown ...", duration=2)
+            self.lcd.turn_off()
+            os.system("sudo shutdown -h now")
 
 class MenuPage(Page):
     """
@@ -230,6 +252,8 @@ class MenuPage(Page):
     PAGES = [
         dict(name="Nommer bouton", page=NameButtonPage()),
         dict(name="Voir les stats", page=None),
+        dict(name="Eteindre", page=ShutdownPage()),
+        dict(name="Redemarrer", page=ShutdownPage(restart=True)),
     ]
 
     def __init__(self):

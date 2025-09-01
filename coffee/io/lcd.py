@@ -112,7 +112,7 @@ class LCD(I2cLcd):
         self.lcd_thread.start()
 
     @single_lcd_write
-    def blink(self, interval: float = 0.5, n: int = -1) -> None:
+    def blink(self, message:str, interval: float = 0.5, n: int = -1) -> None:
         """
         Blink the LCD backlight with a service message.
 
@@ -123,7 +123,7 @@ class LCD(I2cLcd):
 
         def worker() -> None:
             self.move_to(0, 0)
-            self.putstr("Service ...")
+            self.putstr(message)
             idx = 0
             while True:
                 if self.stop_event.is_set() or ((n > 0) and (idx >= n)):
@@ -138,6 +138,29 @@ class LCD(I2cLcd):
         self.lcd_thread.start()
 
     @single_lcd_write
+    def turn_off(self):
+        self.clear()
+        self.display_off()
+        self.backlight_off()
+
+    @single_lcd_write
     def clear(self) -> None:
-        """Clear the LCD display."""
         super().clear()
+
+    @single_lcd_write
+    def display_on(self) -> None:
+        super().display_on()
+
+    @single_lcd_write
+    def display_off(self) -> None:
+        super().display_off()
+
+    @single_lcd_write
+    def backlight_on(self) -> None:
+        super().backlight_on()
+
+    @single_lcd_write
+    def backlight_off(self) -> None:
+        super().backlight_off()
+
+

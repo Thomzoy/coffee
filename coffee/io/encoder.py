@@ -57,7 +57,13 @@ class Encoder:
             if red_button_callback:
                 self.red_button.when_pressed = red_button_callback
 
-    def transition(self):
+    def transition(self) -> None:
+        """
+        Handle encoder state transitions and detect rotation direction.
+        
+        Processes GPIO pin state changes to determine clockwise or 
+        counterclockwise rotation based on quadrature encoding.
+        """
         p1 = int(self.clk_pin.is_pressed)
         p2 = int(self.data_pin.is_pressed)
         newState = f"{p1}{p2}"

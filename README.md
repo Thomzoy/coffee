@@ -31,6 +31,9 @@ sudo systemctl start pigpiod
 sudo systemctl enable pigpiod  # Enable on boot
 ```
 
+## Run on boot (already done)
+See coffee/scripts/systemd
+
 # How it works
 ## Inputs
 ### Scale: coffee.io.scale.scale.Scale

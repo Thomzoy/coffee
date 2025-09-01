@@ -11,11 +11,11 @@ Device.pin_factory = PiGPIOFactory()
 class Encoder:
     """
     Rotary encoder with button interface for user input.
-    
+
     Handles rotary encoder rotation detection and button press events
     using GPIO pins and callbacks.
     """
-    
+
     def __init__(
         self,
         clk_pin: int,
@@ -60,8 +60,8 @@ class Encoder:
     def transition(self) -> None:
         """
         Handle encoder state transitions and detect rotation direction.
-        
-        Processes GPIO pin state changes to determine clockwise or 
+
+        Processes GPIO pin state changes to determine clockwise or
         counterclockwise rotation based on quadrature encoding.
         """
         p1 = int(self.clk_pin.is_pressed)
@@ -93,7 +93,7 @@ class Encoder:
     def set_encoder_button_callback(
         self, encoder_button_callback: Optional[Callable[[], Page | None]]
     ):
-        self.encoder_button.when_pressed  = encoder_button_callback
+        self.encoder_button.when_pressed = encoder_button_callback
 
     def set_red_button_callback(
         self, red_button_callback: Optional[Callable[[], Page | None]]

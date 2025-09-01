@@ -2,10 +2,10 @@
 
 import time
 
+from coffee.app.app import LCDApp
 from coffee.io.encoder import Encoder
 from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
-from coffee.app.app import LCDApp
 
 lcd = LCDApp()
 

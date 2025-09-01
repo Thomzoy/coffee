@@ -9,19 +9,21 @@ from coffee.config import CUSTOM_CHARS
 
 
 @wrapt.decorator
-def single_lcd_write(wrapped: Callable, instance: Any, args: tuple, kwargs: dict) -> Any:
+def single_lcd_write(
+    wrapped: Callable, instance: Any, args: tuple, kwargs: dict
+) -> Any:
     """
     Decorator to ensure single LCD write operations by managing LCD threads.
-    
+
     Stops any running LCD thread before executing the wrapped function and
     clears the stop event for new threads.
-    
+
     Args:
         wrapped: The function being decorated
         instance: The instance the method is called on
         args: Positional arguments for the wrapped function
         kwargs: Keyword arguments for the wrapped function
-        
+
     Returns:
         The result of the wrapped function
     """
@@ -43,10 +45,10 @@ def single_lcd_write(wrapped: Callable, instance: Any, args: tuple, kwargs: dict
 class LCD(I2cLcd):
     """
     Enhanced LCD class with scrolling and blinking capabilities.
-    
+
     Extends I2cLcd with thread-safe scrolling messages and blinking functionality.
     """
-    
+
     def __init__(
         self,
         port: int = 1,
@@ -56,7 +58,7 @@ class LCD(I2cLcd):
     ) -> None:
         """
         Initialize the LCD with enhanced capabilities.
-        
+
         Args:
             port: I2C port number
             i2c_addr: I2C address of the LCD
@@ -76,27 +78,16 @@ class LCD(I2cLcd):
             if idx < 8:  # 8 addresses available
                 self.custom_char(idx, array)
 
-    def check_thread(self) -> None:
-        """Stop any currently running LCD thread and clear stop flag."""
-        # Stop any currently running scroll thread
-        if self.lcd_thread and self.lcd_thread.is_alive():
-            self.stop_event.set()
-            self.lcd_thread.join()
-
-        # Clear the stop flag for the new thread
-        self.stop_event.clear()
-
     @single_lcd_write
     def scroll_message(self, message: str, row: int = 0, sleep: float = 0.5) -> None:
         """
         Display a scrolling message on the specified row.
-        
+
         Args:
             message: The message to scroll
             row: The row number to display on (0 or 1)
             sleep: Time in seconds between scroll steps
         """
-        # self.check_thread()
 
         # Start a new scrolling thread
         def worker() -> None:
@@ -124,12 +115,12 @@ class LCD(I2cLcd):
     def blink(self, interval: float = 0.5, n: int = -1) -> None:
         """
         Blink the LCD backlight with a service message.
-        
+
         Args:
             interval: Time in seconds between blinks
             n: Number of blinks (-1 for infinite)
         """
-        # self.check_thread()
+
         def worker() -> None:
             self.move_to(0, 0)
             self.putstr("Service ...")

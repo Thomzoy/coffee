@@ -1,30 +1,31 @@
 from time import time
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 import wrapt
 
-from coffee.io.lcd import LCD
+from coffee.app.page import BasePage, MugPage, Page
+from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION
 from coffee.io.encoder import Encoder
+from coffee.io.lcd import LCD
 from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
-from coffee.app.page import BasePage, MugPage, Page
-
-from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION
 
 
 @wrapt.decorator
-def set_page(wrapped: Callable, instance: Any, args: tuple, kwargs: dict) -> Optional[Page]:
+def set_page(
+    wrapped: Callable, instance: Any, args: tuple, kwargs: dict
+) -> Optional[Page]:
     """
     Decorator to handle page transitions in the LCD app.
-    
+
     Updates the display, sets the new page, and refreshes the screen.
-    
+
     Args:
         wrapped: The function being decorated
         instance: The LCDApp instance
         args: Positional arguments for the wrapped function
         kwargs: Keyword arguments for the wrapped function
-        
+
     Returns:
         The new page or None
     """
@@ -46,10 +47,10 @@ def set_page(wrapped: Callable, instance: Any, args: tuple, kwargs: dict) -> Opt
 class LCDApp:
     """
     Main LCD application controller.
-    
+
     Manages the LCD display, user input, and page navigation for the coffee machine interface.
     """
-    
+
     def __init__(
         self,
         address: int = 0x27,
@@ -60,7 +61,7 @@ class LCDApp:
     ):
         """
         Initialize the LCD application.
-        
+
         Args:
             address: I2C address of the LCD
             rows: Number of rows on the LCD
@@ -72,6 +73,7 @@ class LCDApp:
         self.page = page if page is not None else BasePage().set_lcd(self.lcd)
         self.timeout = timeout
         self.last_update = int(time())
+        self.is_on = True
         self.scale: Scale | None = None
         self.multiplex: Multiplex | None = None
         self.encoder: Encoder | None = None
@@ -84,7 +86,7 @@ class LCDApp:
     ):
         """
         Configure input devices for the LCD app.
-        
+
         Args:
             scale: Weight scale sensor
             multiplex: Button multiplexer
@@ -101,26 +103,33 @@ class LCDApp:
 
         if encoder is not None:
             self.encoder = encoder
-            self.encoder.set_encoder_callback(self.encoder_callback),
-            self.encoder.set_encoder_button_callback(self.encoder_button_callback),
-            self.encoder.set_red_button_callback(self.red_button_callback),
+            (self.encoder.set_encoder_callback(self.encoder_callback),)
+            (self.encoder.set_encoder_button_callback(self.encoder_button_callback),)
+            (self.encoder.set_red_button_callback(self.red_button_callback),)
 
     def display(self):
         """Refresh the LCD display with the current page content."""
         self.lcd.clear()
         self.page.display()
 
+    def turn_off(self):
+        if self.is_on:
+            self.lcd.clear()
+            self.lcd.display_off()
+            self.lcd.backlight_off()
+            self.is_on = False
+
     def check_timeout(self):
         """Check if the current page has timed out and reset to base page if needed."""
-        if not isinstance(self.page, BasePage):
-            if int(time()) - self.last_update >= self.timeout:
+        if int(time()) - self.last_update >= self.timeout:
+            if not isinstance(self.page, BasePage):
                 print("Timeout")
                 self.page.timeout_callback()
-                self.lcd.clear()
-                self.lcd.display_off()
-                self.lcd.backlight_off()
+                self.turn_off()
                 self.page = BasePage().set_lcd(self.lcd)
                 self.page.display()
+            else:
+                self.turn_off()
 
     @set_page
     def encoder_callback(self, clockwise: bool):
@@ -149,9 +158,11 @@ class LCDApp:
         print(f"New mug - {mug_value} g")
         if MUG_BUTTON_LOOKBEHIND_DURATION:
             now = time()
-            recent_button_presses = set([
-                person_id for person_id, timestamp in self.multiplex.state.items() if now - timestamp < MUG_BUTTON_LOOKBEHIND_DURATION
-            ])
+            recent_button_presses = [
+                person_id
+                for person_id, timestamp in self.multiplex.state.items()
+                if now - timestamp < MUG_BUTTON_LOOKBEHIND_DURATION
+            ]
             print(f"Including: {recent_button_presses}")
         return MugPage(mug_value=mug_value, person_ids=recent_button_presses)
 

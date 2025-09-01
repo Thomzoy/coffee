@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from typing import Dict, Optional, Set
+from typing import Optional, List
 
 from coffee.config import CUSTOM_CHARS_IDX
 from coffee.io.lcd import LCD, single_lcd_write
@@ -11,10 +11,10 @@ from .db import Database
 class Page:
     """
     Base class for LCD application pages.
-    
+
     Provides common functionality for displaying content and handling user input.
     """
-    
+
     def __init__(
         self,
     ):
@@ -24,10 +24,10 @@ class Page:
     def set_lcd(self, lcd: LCD):
         """
         Associate this page with an LCD instance.
-        
+
         Args:
             lcd: The LCD instance to use for display
-            
+
         Returns:
             Self for method chaining
         """
@@ -78,14 +78,14 @@ class BasePage(Page):
     """
     Default home page displayed when the application starts or times out.
     """
-    
+
     def __init__(self):
         super().__init__()
 
     @single_lcd_write
     def display(self):
         self.lcd.move_to(0, 0)
-        self.lcd.putstr("Bonjour !!")
+        self.lcd.putstr("Bonjour !")
 
     def encoder_callback(self, clockwise: bool) -> Optional["Page"]:
         return MenuPage()
@@ -98,7 +98,7 @@ class NameButtonPage(Page):
     """
     Interactive page for assigning names to physical buttons.
     """
-    
+
     values = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + [CUSTOM_CHARS_IDX["enter"]]
 
     def __init__(self):
@@ -143,7 +143,7 @@ class PersonPage(Page):
     """
     Displays personalized greeting and coffee consumption statistics for a user.
     """
-    
+
     def __init__(self, button_id: int):
         super().__init__()
         self.button_id = button_id
@@ -154,7 +154,7 @@ class PersonPage(Page):
             name = db.get_name(self.button_id)
             mugs = db.get_mugs(name)
         self.lcd.move_to(0, 0)
-        self.lcd.putstr(f"Bonjour {name}!")
+        self.lcd.putstr(f"{name}:")
         self.lcd.move_to(0, 1)
 
         mugs_today = [
@@ -173,11 +173,13 @@ class MugPage(Page):
     """
     Handles mug serving workflow - displays mug weight and assigns to users.
     """
-    
-    def __init__(self, mug_value: Optional[float] = None, person_ids: Optional[Set[int]] = None):
+
+    def __init__(
+        self, mug_value: Optional[float] = None, person_ids: Optional[List[int]] = None
+    ):
         super().__init__()
         self.mug_value = mug_value
-        self.person_ids = person_ids if person_ids is not None else set()
+        self.person_ids = person_ids if person_ids is not None else []
         self.init_timestamp = int(time.time())
 
     @single_lcd_write
@@ -197,7 +199,7 @@ class MugPage(Page):
                 self.lcd.scroll_message(message, row=1, sleep=0.1)
 
     def person_button_callback(self, button_id: int) -> Optional["Page"]:
-        self.person_ids.add(str(button_id))
+        self.person_ids.append(str(button_id))
 
     def encoder_button_callback(self) -> Optional["Page"]:
         with Database() as db:
@@ -210,9 +212,9 @@ class MugPage(Page):
         # Remove all person recorded for the current mug (if any)
         # Else, back to main page
         if self.person_ids:
-            self.person_ids = set()
-            self.display_temporary("Reset tasse...")
+            self.person_ids = self.person_ids[:-1]
         else:
+            self.display_temporary("Annule tasse...")
             return BasePage()
 
     def timeout_callback(self) -> Optional["Page"]:
@@ -224,7 +226,7 @@ class MenuPage(Page):
     """
     Main menu for administrative functions like naming buttons and viewing stats.
     """
-    
+
     PAGES = [
         dict(name="Nommer bouton", page=NameButtonPage()),
         dict(name="Voir les stats", page=None),

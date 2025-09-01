@@ -6,14 +6,14 @@ from typing import List, Union
 class Database:
     """
     SQLite database interface for the coffee tracking application.
-    
+
     Manages user data and coffee consumption records using a context manager pattern.
     """
-    
+
     def __init__(self, db_name: str = "app_data.db"):
         """
         Initialize database connection parameters.
-        
+
         Args:
             db_name: Path to the SQLite database file
         """

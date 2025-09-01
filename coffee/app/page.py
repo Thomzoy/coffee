@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Dict, Optional, Set
 
 from coffee.config import CUSTOM_CHARS_IDX
 from coffee.io.lcd import LCD, single_lcd_write
@@ -142,10 +142,11 @@ class PersonPage(Page):
 
 
 class MugPage(Page):
-    def __init__(self, mug_value: Optional[float] = None):
+    def __init__(self, mug_value: Optional[float] = None, person_ids: Optional[Set[int]] = None):
         super().__init__()
         self.mug_value = mug_value
-        self.person_ids = set()
+        self.person_ids = person_ids if person_ids is not None else set()
+        self.init_timestamp = int(time.time())
 
     @single_lcd_write
     def display(self):
@@ -172,6 +173,15 @@ class MugPage(Page):
                 db.add_mug(person_id, self.mug_value / len(self.person_ids))
         self.display_temporary("OK !")
         return BasePage()
+
+    def red_button_callback(self) -> Optional["Page"]:
+        # Remove all person recorded for the current mug (if any)
+        # Else, back to main page
+        if self.person_ids:
+            self.person_ids = set()
+            self.display_temporary("Reset tasse...")
+        else:
+            return BasePage()
 
     def timeout_callback(self) -> Optional["Page"]:
         if self.person_ids:

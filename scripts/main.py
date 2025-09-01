@@ -1,9 +1,11 @@
+#! /home/dietpi/coffee/.venv//bin/activate
+
 import time
 
 from coffee.io.encoder import Encoder
-from coffee.io.multiplex import MultiPlex
+from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
-from coffee.app import LCDApp
+from coffee.app.app import LCDApp
 
 lcd = LCDApp()
 
@@ -12,23 +14,18 @@ encoder = Encoder(
     data_pin=21,
     encoder_button_pin=20,
     red_button_pin=18,
-    encoder_callback=lcd.encoder_callback,
-    encoder_button_callback=lcd.encoder_button_callback,
-    red_button_callback=lcd.red_button_callback,
 )
 
-multiplex = MultiPlex(
+multiplex = Multiplex(
     interrupt_pin=4,
-    button_callback=lcd.person_button_callback,
 )
 
 scale = Scale(
     smoothing_method="median",
     smoothing_window=5,
-    served_mug_callback=lcd.served_mug_callback,
-    removed_pot_callback=lcd.removed_pot_callback,
 )
 
+lcd.set_inputs(scale=scale, multiplex=multiplex, encoder=encoder)
 lcd.display()
 
 try:

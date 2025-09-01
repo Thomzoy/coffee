@@ -3,6 +3,8 @@ import threading
 from collections import deque
 from typing import Any, Callable, Literal, Optional
 
+from coffee.app.page import Page
+
 from .hx711 import HX711
 
 MODES = ["COFFEE_POT_ON", "COFFEE_POT_OFF"]
@@ -17,8 +19,8 @@ class Scale:
         smoothing_window: int = 3,
         smoothing_method: Literal["mean", "median"] = "median",
         reference_unit: float = 305.834,
-        served_mug_callback: Optional[Callable[[float], Any]] = None,
-        removed_pot_callback: Optional[Callable[[], Any]] = None,
+        served_mug_callback: Optional[Callable[[float], Page | None]] = None,
+        removed_pot_callback: Optional[Callable[[], Page | None]] = None,
     ):
         self.weight_buffer = deque(maxlen=max_readings)
         self.buffer_lock = threading.Lock()
@@ -27,8 +29,8 @@ class Scale:
         self.smoothing_window = smoothing_window
         self.smoothing_method = smoothing_method
 
-        self.served_mug_callback: Optional[Callable[[float], Any]] = served_mug_callback
-        self.removed_pot_callback: Optional[Callable[[], Any]] = removed_pot_callback
+        self.served_mug_callback: Optional[Callable[[float], Page | None]] = served_mug_callback
+        self.removed_pot_callback: Optional[Callable[[], Page | None]] = removed_pot_callback
 
         self.hx = HX711(data_pin, clock_pin)
         self.hx.setReferenceUnit(reference_unit)
@@ -126,3 +128,9 @@ class Scale:
 
     def get_last_mug_value(self):
         return self.mug_value
+
+    def set_served_mug_callback(self, served_mug_callback: Optional[Callable[[float], Page | None]]):
+        self.served_mug_callback = served_mug_callback
+
+    def set_removed_pot_callback(self, removed_pot_callback: Optional[Callable[[], Page | None]]):
+        self.removed_pot_callback: Optional[Callable[[], Any]] = removed_pot_callback

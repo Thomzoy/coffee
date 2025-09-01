@@ -1,4 +1,5 @@
-from typing import Callable, List, Optional
+import time
+from typing import Callable, Dict, List, Optional
 
 import smbus
 from gpiozero import Button, Device
@@ -11,7 +12,7 @@ from coffee.app.page import Page
 Device.pin_factory = PiGPIOFactory()
 
 
-class MultiPlex:
+class Multiplex:
     def __init__(
         self,
         address: int = 0x20,
@@ -48,8 +49,10 @@ class MultiPlex:
         self.mcp.set_bit_enabled(IOCONA, ODR_BIT, True)
         self.mcp.set_bit_enabled(IOCONB, ODR_BIT, True)
 
-        self.button_callback = button_callback
+        # Stores the time of last button press:
+        self.state: Dict[int,int] = dict()
 
+        self.button_callback = button_callback
         self.button.when_pressed = self.interrupt_callback
 
     def get_pressed_button_id(
@@ -73,10 +76,12 @@ class MultiPlex:
         # Reset interrupt by reading all pins
         self.mcp.digital_read_all()
 
-        if (pressed_id is not None) and self.button_callback is not None:
-            self.button_callback(pressed_id)
+        if pressed_id is not None:
+            self.state[pressed_id] = int(time.time())
+            if self.button_callback is not None:
+                self.button_callback(pressed_id)
 
     def set_button_callback(
-        self, button_callback: Optional[Callable[[int], Page | None]]
+        self, button_callback: Optional[Callable[[int, Dict[int, int]], Page | None]]
     ):
         self.button_callback = button_callback

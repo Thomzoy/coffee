@@ -16,5 +16,5 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["coffee", "coffee.app", "coffee.inputs", "coffee.inputs.scale", "coffee.ui"]
+packages = ["coffee"]
 

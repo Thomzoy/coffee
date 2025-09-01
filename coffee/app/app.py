@@ -1,11 +1,15 @@
 from time import time
-from typing import Optional
+from typing import Dict, Optional
 
 import wrapt
 
 from coffee.io.lcd import LCD
+from coffee.io.encoder import Encoder
+from coffee.io.multiplex import Multiplex
+from coffee.io.scale import Scale
+from coffee.app.page import BasePage, MugPage, Page
 
-from .page import BasePage, MugPage, Page
+from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION
 
 
 @wrapt.decorator
@@ -38,6 +42,30 @@ class LCDApp:
         self.page = page if page is not None else BasePage().set_lcd(self.lcd)
         self.timeout = timeout
         self.last_update = int(time())
+        self.scale: Scale | None = None
+        self.multiplex: Multiplex | None = None
+        self.encoder: Encoder | None = None
+
+    def set_inputs(
+        self,
+        scale: Scale | None = None,
+        multiplex: Multiplex | None = None,
+        encoder: Encoder | None = None,
+    ):
+        if scale is not None:
+            self.scale = scale
+            self.scale.set_served_mug_callback(self.served_mug_callback)
+            self.scale.set_removed_pot_callback(self.removed_pot_callback)
+
+        if multiplex is not None:
+            self.multiplex = multiplex
+            self.multiplex.set_button_callback(self.person_button_callback)
+
+        if encoder is not None:
+            self.encoder = encoder
+            self.encoder.set_encoder_callback(self.encoder_callback),
+            self.encoder.set_encoder_button_callback(self.encoder_button_callback),
+            self.encoder.set_red_button_callback(self.red_button_callback),
 
     def display(self):
         self.lcd.clear()
@@ -79,7 +107,13 @@ class LCDApp:
     @set_page
     def served_mug_callback(self, mug_value: float):
         print(f"New mug - {mug_value} g")
-        return MugPage(mug_value=mug_value)
+        if MUG_BUTTON_LOOKBEHIND_DURATION:
+            now = time()
+            recent_button_presses = set([
+                person_id for person_id, timestamp in self.multiplex.state.items() if now - timestamp < MUG_BUTTON_LOOKBEHIND_DURATION
+            ])
+            print(f"Including: {recent_button_presses}")
+        return MugPage(mug_value=mug_value, person_ids=recent_button_presses)
 
     @set_page
     def removed_pot_callback(self):

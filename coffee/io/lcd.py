@@ -17,6 +17,7 @@ def single_lcd_write(wrapped, instance, args, kwargs):
         if instance.lcd_thread and instance.lcd_thread.is_alive():
             instance.stop_event.set()
             instance.lcd_thread.join()
+            time.sleep(0.2)
         # Clear the stop flag for the new thread
         instance.stop_event.clear()
 

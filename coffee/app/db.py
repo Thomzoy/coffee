@@ -26,7 +26,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS user (
                 button_id INTEGER,
                 name TEXT,
-                datetime TEXT
+                creation_dt TEXT
             )
         """)
 
@@ -34,7 +34,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS mug (
                 button_id INTEGER,
                 value REAL,
-                datetime TEXT
+                mug_dt TEXT
             )
         """)
 
@@ -46,7 +46,7 @@ class Database:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            INSERT INTO user (button_id, name, datetime)
+            INSERT INTO user (button_id, name, creation_dt)
             VALUES (?, ?, ?)
         """,
             (button_id, name, dt.isoformat()),
@@ -59,14 +59,14 @@ class Database:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            INSERT INTO mug (button_id, value, datetime)
+            INSERT INTO mug (button_id, value, mug_dt)
             VALUES (?, ?, ?)
         """,
             (button_id, value, dt.isoformat()),
         )
         self.conn.commit()
 
-    def get_mugs(self, identifier: Union[int, str]) -> List[dict]:
+    def get_mugs(self, identifier: Union[int, str], today: bool = True) -> List[dict]:
         """
         Get all mugs corresponding to a button_id or user name.
         Returns a list of dictionaries with parsed datetimes.
@@ -74,26 +74,27 @@ class Database:
         cursor = self.conn.cursor()
 
         if isinstance(identifier, int):
-            # Query by button_id
-            cursor.execute(
-                "SELECT button_id, value, datetime FROM mug WHERE button_id = ?",
-                (identifier,),
-            )
+            query = "SELECT button_id, value, mug_dt FROM mug WHERE button_id = ?"
+            params = [identifier]
+
         elif isinstance(identifier, str):
-            # Query by user name (join with user table)
-            cursor.execute(
-                """
-                SELECT m.button_id, m.value, m.datetime
+            query = """
+                SELECT m.button_id, m.value, m.mug_dt
                 FROM mug m
                 JOIN user u ON m.button_id = u.button_id
                 WHERE u.name = ?
-            """,
-                (identifier,),
-            )
+            """
+            params = [identifier]
+
         else:
             raise ValueError("Identifier must be an int (button_id) or str (name).")
 
+        if today:
+            query += " AND date(mug_dt) = date('now', 'localtime')"
+
+        cursor.execute(query, params)
         rows = cursor.fetchall()
+
         result = []
         for button_id, value, dt_str in rows:
             result.append(
@@ -117,7 +118,7 @@ class Database:
             SELECT name
             FROM user
             WHERE button_id = ?
-            ORDER BY datetime(datetime) DESC
+            ORDER BY datetime(creation_dt) DESC
             LIMIT 1
         """,
             (button_id,),

@@ -43,12 +43,12 @@ class Encoder:
                 encoder_button_pin, pull_up=True, bounce_time=0.05
             )
             if encoder_button_callback:
-                self.encoder_button.when_pressed = lambda: encoder_button_callback()
+                self.encoder_button.when_pressed = encoder_button_callback
 
         if red_button_pin is not None:
             self.red_button = Button(red_button_pin, pull_up=True, bounce_time=0.05)
             if red_button_callback:
-                self.red_button.when_pressed = lambda: red_button_callback()
+                self.red_button.when_pressed = red_button_callback
 
     def transition(self):
         p1 = int(self.clk_pin.is_pressed)
@@ -80,9 +80,9 @@ class Encoder:
     def set_encoder_button_callback(
         self, encoder_button_callback: Optional[Callable[[], Page | None]]
     ):
-        self.encoder_button_callback = encoder_button_callback
+        self.encoder_button.when_pressed  = encoder_button_callback
 
     def set_red_button_callback(
         self, red_button_callback: Optional[Callable[[], Page | None]]
     ):
-        self.red_button_callback = red_button_callback
+        self.red_button.when_pressed = red_button_callback

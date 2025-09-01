@@ -11,6 +11,13 @@ MODES = ["COFFEE_POT_ON", "COFFEE_POT_OFF"]
 
 
 class Scale:
+    """
+    HX711-based weight scale sensor with callback functionality.
+    
+    Manages weight readings, detects pot removal/placement, and triggers
+    callbacks for mug serving events. Runs sensor reading in a background thread.
+    """
+    
     def __init__(
         self,
         data_pin: int = 17,
@@ -72,7 +79,16 @@ class Scale:
             except Exception as e:
                 print(f"Sensor reading error: {e}")
 
-    def read_sensor_value(self):
+    def read_sensor_value(self) -> float:
+        """
+        Read and process a single sensor value.
+        
+        Takes multiple readings, applies smoothing, detects pot changes,
+        and triggers callbacks for mug events.
+        
+        Returns:
+            The processed weight value
+        """
         values = [self.hx.getWeight() for _ in range(self.smoothing_window)]
         if self.smoothing_method == "mean":
             value = statistics.mean(values)
@@ -126,7 +142,8 @@ class Scale:
         with self.buffer_lock:
             return self.weight_buffer[-1] if self.weight_buffer else 0
 
-    def get_last_mug_value(self):
+    def get_last_mug_value(self) -> float:
+        """Get the weight of the last served mug."""
         return self.mug_value
 
     def set_served_mug_callback(self, served_mug_callback: Optional[Callable[[float], Page | None]]):

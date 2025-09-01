@@ -13,6 +13,13 @@ Device.pin_factory = PiGPIOFactory()
 
 
 class Multiplex:
+    """
+    MCP23017-based button multiplexer with interrupt handling.
+    
+    Manages multiple button inputs through an I2C multiplexer with
+    interrupt-driven event detection.
+    """
+    
     def __init__(
         self,
         address: int = 0x20,
@@ -65,7 +72,13 @@ class Multiplex:
             print("No button was pressed")
             return None
 
-    def interrupt_callback(self):
+    def interrupt_callback(self) -> None:
+        """
+        Handle MCP23017 interrupt events for button presses.
+        
+        Reads interrupt flags, determines which button was pressed,
+        and triggers the configured callback.
+        """
         flags_a, flags_b = self.mcp.read_interrupt_flags()
         caps_a, caps_b = self.mcp.read_interrupt_captures()
         print(flags_a, caps_a)

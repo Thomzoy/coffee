@@ -9,12 +9,28 @@ from .db import Database
 
 
 class Page:
+    """
+    Base class for LCD application pages.
+    
+    Provides common functionality for displaying content and handling user input.
+    """
+    
     def __init__(
         self,
     ):
+        """Initialize a new page."""
         pass
 
     def set_lcd(self, lcd: LCD):
+        """
+        Associate this page with an LCD instance.
+        
+        Args:
+            lcd: The LCD instance to use for display
+            
+        Returns:
+            Self for method chaining
+        """
         self.lcd = lcd
         return self
 
@@ -59,6 +75,10 @@ class Page:
 
 
 class BasePage(Page):
+    """
+    Default home page displayed when the application starts or times out.
+    """
+    
     def __init__(self):
         super().__init__()
 
@@ -75,6 +95,10 @@ class BasePage(Page):
 
 
 class NameButtonPage(Page):
+    """
+    Interactive page for assigning names to physical buttons.
+    """
+    
     values = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + [CUSTOM_CHARS_IDX["enter"]]
 
     def __init__(self):
@@ -116,6 +140,10 @@ class NameButtonPage(Page):
 
 
 class PersonPage(Page):
+    """
+    Displays personalized greeting and coffee consumption statistics for a user.
+    """
+    
     def __init__(self, button_id: int):
         super().__init__()
         self.button_id = button_id
@@ -142,6 +170,10 @@ class PersonPage(Page):
 
 
 class MugPage(Page):
+    """
+    Handles mug serving workflow - displays mug weight and assigns to users.
+    """
+    
     def __init__(self, mug_value: Optional[float] = None, person_ids: Optional[Set[int]] = None):
         super().__init__()
         self.mug_value = mug_value
@@ -189,6 +221,10 @@ class MugPage(Page):
 
 
 class MenuPage(Page):
+    """
+    Main menu for administrative functions like naming buttons and viewing stats.
+    """
+    
     PAGES = [
         dict(name="Nommer bouton", page=NameButtonPage()),
         dict(name="Voir les stats", page=None),

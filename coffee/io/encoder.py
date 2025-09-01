@@ -9,6 +9,13 @@ Device.pin_factory = PiGPIOFactory()
 
 
 class Encoder:
+    """
+    Rotary encoder with button interface for user input.
+    
+    Handles rotary encoder rotation detection and button press events
+    using GPIO pins and callbacks.
+    """
+    
     def __init__(
         self,
         clk_pin: int,

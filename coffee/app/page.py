@@ -9,12 +9,28 @@ from .db import Database
 
 
 class Page:
+    """
+    Base class for LCD application pages.
+    
+    Provides common functionality for displaying content and handling user input.
+    """
+    
     def __init__(
         self,
     ):
+        """Initialize a new page."""
         pass
 
     def set_lcd(self, lcd: LCD):
+        """
+        Associate this page with an LCD instance.
+        
+        Args:
+            lcd: The LCD instance to use for display
+            
+        Returns:
+            Self for method chaining
+        """
         self.lcd = lcd
         return self
 

@@ -1,5 +1,5 @@
 from time import time
-from typing import Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import wrapt
 
@@ -13,7 +13,21 @@ from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION
 
 
 @wrapt.decorator
-def set_page(wrapped, instance, args, kwargs):
+def set_page(wrapped: Callable, instance: Any, args: tuple, kwargs: dict) -> Optional[Page]:
+    """
+    Decorator to handle page transitions in the LCD app.
+    
+    Updates the display, sets the new page, and refreshes the screen.
+    
+    Args:
+        wrapped: The function being decorated
+        instance: The LCDApp instance
+        args: Positional arguments for the wrapped function
+        kwargs: Keyword arguments for the wrapped function
+        
+    Returns:
+        The new page or None
+    """
     # Call the original method
     page = wrapped(*args, **kwargs)
 
@@ -30,6 +44,12 @@ def set_page(wrapped, instance, args, kwargs):
 
 
 class LCDApp:
+    """
+    Main LCD application controller.
+    
+    Manages the LCD display, user input, and page navigation for the coffee machine interface.
+    """
+    
     def __init__(
         self,
         address: int = 0x27,
@@ -38,6 +58,16 @@ class LCDApp:
         page: Optional[Page] = None,
         timeout: int = 15,
     ):
+        """
+        Initialize the LCD application.
+        
+        Args:
+            address: I2C address of the LCD
+            rows: Number of rows on the LCD
+            width: Number of columns on the LCD
+            page: Initial page to display (defaults to BasePage)
+            timeout: Timeout in seconds for automatic page reset
+        """
         self.lcd = LCD(1, address, rows, width)
         self.page = page if page is not None else BasePage().set_lcd(self.lcd)
         self.timeout = timeout
@@ -52,6 +82,14 @@ class LCDApp:
         multiplex: Multiplex | None = None,
         encoder: Encoder | None = None,
     ):
+        """
+        Configure input devices for the LCD app.
+        
+        Args:
+            scale: Weight scale sensor
+            multiplex: Button multiplexer
+            encoder: Rotary encoder with buttons
+        """
         if scale is not None:
             self.scale = scale
             self.scale.set_served_mug_callback(self.served_mug_callback)
@@ -68,10 +106,12 @@ class LCDApp:
             self.encoder.set_red_button_callback(self.red_button_callback),
 
     def display(self):
+        """Refresh the LCD display with the current page content."""
         self.lcd.clear()
         self.page.display()
 
     def check_timeout(self):
+        """Check if the current page has timed out and reset to base page if needed."""
         if not isinstance(self.page, BasePage):
             if int(time()) - self.last_update >= self.timeout:
                 print("Timeout")

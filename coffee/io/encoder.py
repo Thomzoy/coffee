@@ -60,10 +60,10 @@ class Encoder:
     def cleanup(self):
         self.clk_pin.close()
         self.data_pin.close()
-        if encoder_button_pin is not None:
-            encoder_button_pin.close()
-        if red_button_pin is not None:
-            red_button_pin.close()
+        if self.encoder_button is not None:
+            self.encoder_button.close()
+        if self.red_button is not None:
+            self.red_button.close()
 
     def transition(self) -> None:
         """

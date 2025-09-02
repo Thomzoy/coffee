@@ -12,8 +12,8 @@ dependencies = [
     "gpiozero",
     "mcp23017",
     "RPi.GPIO",
-    "wrapt"
-    "hx711-rpi-py",
+    "wrapt",
+    "hx711-rpi-py"
 ]
 
 [tool.setuptools]

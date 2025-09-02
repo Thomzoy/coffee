@@ -1,6 +1,7 @@
 #! /home/dietpi/coffee/.venv//bin/activate
 
 import time
+from threading import Event
 import signal
 
 from coffee.app.app import LCDApp
@@ -8,58 +9,50 @@ from coffee.io.encoder import Encoder
 from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
 
-app = LCDApp()
+if __name__ == "__main__":
 
-encoder = Encoder(
-    clk_pin=26,
-    data_pin=21,
-    encoder_button_pin=20,
-    red_button_pin=18,
-)
+    app = LCDApp()
 
-multiplex = Multiplex(
-    interrupt_pin=4,
-)
+    encoder = Encoder(
+        clk_pin=26,
+        data_pin=21,
+        encoder_button_pin=20,
+        red_button_pin=18,
+    )
 
-scale = Scale(
-    smoothing_window=7,
-)
+    multiplex = Multiplex(
+        interrupt_pin=4,
+    )
 
-app.set_inputs(scale=scale, multiplex=multiplex, encoder=encoder)
-app.display()
+    scale = Scale()
 
-from threading import Event
-import signal
+    app.set_inputs(scale=scale, multiplex=multiplex, encoder=encoder)
+    app.display()
 
-exit = Event()
+    exit = Event()
 
-def main():
-    while not exit.is_set():
-      do_my_thing()
-      exit.wait(60)
+    def quit(signo, _frame):
+        print("Interrupted by %d, shutting down" % signo)
+        exit.set()
 
-    print("All done!")
-    # perform any cleanup here
+    signal.signal(signal.SIGTERM, quit)
+    signal.signal(signal.SIGINT, quit)
+    signal.signal(signal.SIGHUP, quit)        
 
-def quit(signo, _frame):
-    print("Interrupted by %d, shutting down" % signo)
-    exit.set()
-
-signal.signal(signal.SIGTERM, quit)
-signal.signal(signal.SIGINT, quit)
-signal.signal(signal.SIGHUP, quit)        
-
-try:
-    scale.start_reading()
-    while not exit.is_set():
-        multiplex.mcp.digital_read_all()
-        app.check_timeout()
-        #exit.wait(0.5)
-        time.sleep(0.5)
-except Exception as e:
-    raise e
-finally:
-    scale.stop_reading()
-    multiplex.cleanup()
-    encoder.cleanup()
-    #GPIO.cleanup()
+    try:
+        scale.start_reading()
+        while not exit.is_set():
+            scale.read()
+            multiplex.mcp.digital_read_all()
+            app.check_timeout()
+            exit.wait(0.5)
+    except Exception as e:
+        raise e
+    finally:
+        print("Scale cleanup")
+        scale.stop_reading()
+        print("Multiplex cleanup")
+        multiplex.cleanup()
+        print("Encoder cleanup")
+        encoder.cleanup()
+        #GPIO.cleanup()

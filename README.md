@@ -94,3 +94,6 @@ See `coffee/app/pages.py` for descriptions and definitions
 * `MugPage`: Displayed when 1. the coffee pot is removed and 2. the coffee mug is put back. 
 * `MenuPage`: Displayed when turning the rotary encoder from the `BasePage`. Can show various other pages, for the moment only 1:
     * `NameButtonPage`: Is used to assign a name to a button
+
+## Misc
+* Careful when writing to the LCD: it can glitch if e.g. a command is interrupted during sending (which can be frequent if using threads), so be sure to check if something is writing before writing. If it glitches, you should 1) try to turn it off and on (small switch behind the board) or 2) turn off the Pi THEN unplug it, wait a bit and replug it.

@@ -167,9 +167,11 @@ class PersonPage(Page):
         mugs_today = [
             mug for mug in mugs if mug["datetime"].date() == datetime.now().date()
         ]
+        n = len(mugs_today)
+        mug_str = "tasse" if n<2 else "tasses"
         volume_today = sum(mug["value"] for mug in mugs_today)
 
-        message = f"Ajd: {len(mugs_today)} tasses - {int(volume_today)} mL"
+        message = f"Ajd: {n} {mug_str} - {int(volume_today)} mL"
         self.lcd.scroll_message(message, row=1, sleep=0.2)
 
     def person_button_callback(self, button_id: int) -> Optional["Page"]:

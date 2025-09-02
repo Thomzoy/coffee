@@ -7,3 +7,14 @@ CUSTOM_CHARS_IDX = {name: chr(idx) for (idx, name) in enumerate(CUSTOM_CHARS.key
 # (starting from the moment the pot is removed from the machine).
 # Set to None to disable this feature (then the button should always be pressed AFTER serving the mug)
 MUG_BUTTON_LOOKBEHIND_DURATION = 15
+
+# Threshold weight (in g) to consider that the pot was removed or put back
+# /!\ Should be set fairly lower that the actual weight of the scale (since measurements are aggregated)
+POT_WEIGHT_THRESHOLD = 80
+
+# Number of scale reading to do before returning the median
+NUM_SCALE_READINGS = 5
+
+# Number of median (from above) scale values to compute STD on to fetch a stable value
+LEN_SCALE_BUFFER = 3
+

@@ -57,6 +57,14 @@ class Encoder:
             if red_button_callback:
                 self.red_button.when_pressed = red_button_callback
 
+    def cleanup(self):
+        self.clk_pin.close()
+        self.data_pin.close()
+        if encoder_button_pin is not None:
+            encoder_button_pin.close()
+        if red_button_pin is not None:
+            red_button_pin.close()
+
     def transition(self) -> None:
         """
         Handle encoder state transitions and detect rotation direction.

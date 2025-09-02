@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import wrapt
 from lcd.i2c_lcd import I2cLcd
@@ -61,6 +61,7 @@ class LCD(I2cLcd):
         Initialize the LCD with enhanced capabilities.
 
         Args:
+            power_pin: set if a MOSFET powers the device
             port: I2C port number
             i2c_addr: I2C address of the LCD
             num_lines: Number of lines on the LCD

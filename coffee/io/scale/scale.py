@@ -1,11 +1,13 @@
+import time
 import statistics
 import threading
 from collections import deque
 from typing import Any, Callable, Literal, Optional
 
+import HX711
+
 from coffee.app.page import Page
 
-from .hx711 import HX711
 
 MODES = ["COFFEE_POT_ON", "COFFEE_POT_OFF"]
 
@@ -24,8 +26,8 @@ class Scale:
         clock_pin: int = 27,
         max_readings: int = 3,
         smoothing_window: int = 3,
-        smoothing_method: Literal["mean", "median"] = "median",
-        reference_unit: float = 305.834,
+        reference_unit: int = 304,
+        offset: int = 1581736,
         served_mug_callback: Optional[Callable[[float], Page | None]] = None,
         removed_pot_callback: Optional[Callable[[], Page | None]] = None,
     ):
@@ -34,7 +36,6 @@ class Scale:
         self.sensor_thread = None
         self.running = False
         self.smoothing_window = smoothing_window
-        self.smoothing_method = smoothing_method
 
         self.served_mug_callback: Optional[Callable[[float], Page | None]] = (
             served_mug_callback
@@ -43,10 +44,15 @@ class Scale:
             removed_pot_callback
         )
 
-        self.hx = HX711(data_pin, clock_pin)
-        self.hx.setReferenceUnit(reference_unit)
-        self.hx.setReadingFormat("MSB", "MSB")
-        self.hx.autosetOffset()
+        self.hx = HX711.SimpleHX711(
+            data_pin,
+            clock_pin,
+            reference_unit,
+            offset,
+            HX711.Rate.HZ_10,
+        )
+        self.hx.setUnit(HX711.Mass.Unit.G)
+        self.hx.zero()
 
         self.has_pot = True
         self.update_mug_value = False
@@ -69,16 +75,19 @@ class Scale:
         self.running = False
         if self.sensor_thread:
             self.sensor_thread.join()
+        self.hx.disconnect()
+        self.hx.powerDown()
 
     def _read_sensor_loop(self):
         """Background thread that reads sensor every second"""
         while self.running:
             try:
-                # Replace this with your actual sensor reading code
                 weight = self.read_sensor_value()
 
                 with self.buffer_lock:
                     self.weight_buffer.append(weight)
+
+                time.sleep(1)
 
             except Exception as e:
                 print(f"Sensor reading error: {e}")
@@ -93,23 +102,21 @@ class Scale:
         Returns:
             The processed weight value
         """
-        values = [self.hx.getWeight() for _ in range(self.smoothing_window)]
-        if self.smoothing_method == "mean":
-            value = statistics.mean(values)
-        else:
-            value = statistics.median(values)
+
+        value = float(self.hx.weight(self.smoothing_window))
+        #print("Weight: ", value)
 
         previous = self.get_latest_reading()
 
         delta = value - previous
-        if self.has_pot and (delta < -200):
+        if delta < -100:
             # Big negative weight difference: pot is removed
             print(f"Pot is removed - Delta: {delta:.1f}")
             self.has_pot = False
             if self.removed_pot_callback is not None:
                 self.removed_pot_callback()
 
-        elif not self.has_pot and (delta > 200):
+        elif (delta > 100):
             # Big positive weight difference: pot is back
             print(f"Pot is back - Delta: {delta:.1f}")
             self.has_pot = True

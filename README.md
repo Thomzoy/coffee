@@ -31,6 +31,21 @@ sudo systemctl start pigpiod
 sudo systemctl enable pigpiod  # Enable on boot
 ```
 
+## HX711 c++ library
+
+We're using https://github.com/endail/hx711-rpi-py. It has c++ dependencies, check how to install here https://github.com/endail/hx711-rpi-py/blob/master/src/install-deps.sh or below:
+
+```bash
+apt-get install -y liblgpio-dev;
+git clone https://github.com/endail/hx711;
+cd hx711;
+make;
+make install;
+ldconfig;
+cd ..;
+```
+
+
 ## Run on boot (already done)
 See coffee/scripts/systemd
 

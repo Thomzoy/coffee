@@ -207,7 +207,8 @@ class MugPage(Page):
                 self.lcd.scroll_message(message, row=1, sleep=0.1)
 
     def person_button_callback(self, button_id: int) -> Optional["Page"]:
-        self.person_ids.append(str(button_id))
+        if button_id not in self.person_ids:
+            self.person_ids.append(str(button_id))
 
     def encoder_button_callback(self) -> Optional["Page"]:
         if self.mug_value is not None:

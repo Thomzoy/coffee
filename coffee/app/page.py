@@ -187,12 +187,13 @@ class MugPage(Page):
         super().__init__()
         self.mug_value = mug_value
         self.person_ids = person_ids if person_ids is not None else []
-        self.init_timestamp = int(time.time())
+        self.timeout = 10 # shorter timeout here
 
     @single_lcd_write
     def display(self):
         if self.mug_value is None:
             # Pot is removed
+            print("Service...")
             self.lcd.blink("Service...")
 
         else:
@@ -244,6 +245,22 @@ class ShutdownPage(Page):
             self.lcd.turn_off()
             os.system("sudo shutdown -h now")
 
+class StatsPage(Page):
+    """
+    Aggregated stats
+    """
+
+    def __init__(self):
+        with Database() as db:
+            self.stats = db.get_sum()
+
+    @single_lcd_write
+    def display(self):
+        self.display_temporary(
+            f"{self.stats['count']} tasses",
+            f"{1e-3*self.stats['sum']:.2f} L",
+        )
+
 class MenuPage(Page):
     """
     Main menu for administrative functions like naming buttons and viewing stats.
@@ -251,7 +268,7 @@ class MenuPage(Page):
 
     PAGES = [
         dict(name="Nommer bouton", page=NameButtonPage()),
-        dict(name="Voir les stats", page=None),
+        dict(name="Stats", page=StatsPage()),
         dict(name="Eteindre", page=ShutdownPage()),
         dict(name="Redemarrer", page=ShutdownPage(restart=True)),
     ]

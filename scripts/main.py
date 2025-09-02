@@ -7,7 +7,7 @@ from coffee.io.encoder import Encoder
 from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
 
-lcd = LCDApp()
+app = LCDApp()
 
 encoder = Encoder(
     clk_pin=26,
@@ -25,14 +25,14 @@ scale = Scale(
     smoothing_window=5,
 )
 
-lcd.set_inputs(scale=scale, multiplex=multiplex, encoder=encoder)
-lcd.display()
+app.set_inputs(scale=scale, multiplex=multiplex, encoder=encoder)
+app.display()
 
 try:
     scale.start_reading()
     while True:
         multiplex.mcp.digital_read_all()
-        lcd.check_timeout()
+        app.check_timeout()
         time.sleep(1)
 except Exception as e:
     raise e

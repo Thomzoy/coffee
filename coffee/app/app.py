@@ -1,4 +1,4 @@
-from time import time
+from time import time, sleep
 from typing import Any, Callable, Optional
 
 import wrapt
@@ -29,14 +29,12 @@ def set_page(
     Returns:
         The new page or None
     """
-    # Call the original method
+
     page = wrapped(*args, **kwargs)
 
     if page is not None:
-        instance.lcd.display_on()
-        instance.lcd.backlight_on()
         instance.page = page.set_lcd(instance.lcd)
-    instance.lcd.clear()
+    instance.lcd.turn_on()
     instance.page.display()
     instance.last_update = int(time())
 
@@ -113,7 +111,11 @@ class LCDApp:
 
     def check_timeout(self):
         """Check if the current page has timed out and reset to base page if needed."""
-        if int(time()) - self.last_update >= self.timeout:
+        if hasattr(self.page, "timeout") and self.page.timeout is not None:
+            timeout = self.page.timeout
+        else:
+            timeout = self.timeout
+        if int(time()) - self.last_update >= timeout:
             self.page.timeout_callback()
             if not isinstance(self.page, BasePage):
                 print("Timeout")

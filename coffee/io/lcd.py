@@ -33,6 +33,7 @@ def single_lcd_write(
     if hasattr(instance, "lcd_thread"):
         # Stop any currently running scroll thread
         if instance.lcd_thread and instance.lcd_thread.is_alive():
+            print("has thread")
             instance.stop_event.set()
             instance.lcd_thread.join()
             time.sleep(0.2)
@@ -111,7 +112,7 @@ class LCD(I2cLcd):
         self.lcd_thread = threading.Thread(target=worker, daemon=True)
         self.lcd_thread.start()
 
-    @single_lcd_write
+    #@single_lcd_write
     def blink(self, message:str, interval: float = 0.5, n: int = -1) -> None:
         """
         Blink the LCD backlight with a service message.
@@ -144,23 +145,11 @@ class LCD(I2cLcd):
         self.backlight_off()
 
     @single_lcd_write
+    def turn_on(self):
+        self.clear()
+        self.display_on()
+        self.backlight_on()
+
+    @single_lcd_write
     def clear(self) -> None:
         super().clear()
-
-    @single_lcd_write
-    def display_on(self) -> None:
-        super().display_on()
-
-    @single_lcd_write
-    def display_off(self) -> None:
-        super().display_off()
-
-    @single_lcd_write
-    def backlight_on(self) -> None:
-        super().backlight_on()
-
-    @single_lcd_write
-    def backlight_off(self) -> None:
-        super().backlight_off()
-
-

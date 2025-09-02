@@ -138,6 +138,20 @@ class Database:
         row = cursor.fetchone()
         return row[0] if row else str(button_id)
 
+    def get_sum(self) -> dict:
+        """
+        Return the total number of mugs and the sum of their values across all users.
+        Returns a dict with keys: 'count' and 'sum'.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT COUNT(*), SUM(value) FROM mug")
+        row = cursor.fetchone()
+
+        return {
+            "count": row[0] if row[0] is not None else 0,
+            "sum": row[1] if row[1] is not None else 0.0,
+        }
+
     def close(self):
         """Close the database connection."""
         self.conn.close()

@@ -13,7 +13,7 @@ dependencies = [
     "mcp23017",
     "RPi.GPIO",
     "wrapt",
-    "hx711-rpi-py"
+    #"hx711-rpi-py"
 ]
 
 [project.optional-dependencies]

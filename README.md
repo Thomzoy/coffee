@@ -1,4 +1,35 @@
-# How to use
+# Coffee Machine Interface
+
+A Raspberry Pi-based coffee machine interface with weight sensing, LCD display, and user tracking.
+
+## Documentation
+
+📖 **[Full Documentation](https://thomzoy.github.io/coffee)** - Complete setup, usage, and API reference
+
+## Quick Start
+
+For detailed instructions, see the [Getting Started Guide](https://thomzoy.github.io/coffee/getting-started/installation/).
+
+### Installation
+
+```bash
+git clone https://github.com/Thomzoy/coffee.git
+cd coffee
+pip install -e ".[docs]"
+```
+
+### Local Documentation
+
+To build and serve the documentation locally:
+
+```bash
+pip install mkdocs mkdocs-material mkdocstrings[python]
+mkdocs serve
+```
+
+Then visit `http://localhost:8000` to view the documentation.
+
+## How to use
 
 * Take the pot and serve coffee to one or more mugs.
 * When you put the pot back, the volume of served coffee is displayed, and the app asks who got the coffee.

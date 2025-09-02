@@ -16,6 +16,13 @@ dependencies = [
     "hx711-rpi-py"
 ]
 
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.20.0",
+]
+
 [tool.setuptools]
 packages = ["coffee"]
 

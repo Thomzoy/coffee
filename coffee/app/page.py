@@ -1,5 +1,13 @@
-import time
+"""UI page hierarchy for the LCD application.
+
+Each concrete subclass of :class:`Page` encapsulates the behaviour and
+presentation of a particular state of the LCD interface (home page, menu,
+person info, mug serving workflow, etc.). Pages may return a new page object
+from any callback method to trigger a navigation transition.
+"""
+
 import os
+import time
 from datetime import datetime
 from typing import List, Optional
 
@@ -10,10 +18,12 @@ from .db import Database
 
 
 class Page:
-    """
-    Base class for LCD application pages.
+    """Base class for LCD application pages.
 
-    Provides common functionality for displaying content and handling user input.
+    Subclasses can override any of the input callback methods to implement
+    navigation or behaviour. To trigger a page transition simply return a new
+    `Page` instance; returning `None` keeps the current page (but will
+    refresh it by running `.display()`).
     """
 
     def __init__(
@@ -22,31 +32,34 @@ class Page:
         """Initialize a new page."""
         pass
 
-    def set_lcd(self, lcd: LCD):
-        """
-        Associate this page with an LCD instance.
-
-        Args:
-            lcd: The LCD instance to use for display
-
-        Returns:
-            Self for method chaining
-        """
+    def set_lcd(self, lcd: LCD) -> "Page":
+        """Associate this page with an LCD instance and return self."""
         self.lcd = lcd
         return self
 
-    @single_lcd_write
-    def display(self):
+    @single_lcd_write  # type: ignore[misc]
+    def display(self) -> None:
         self.lcd.move_to(0, 0)
         self.lcd.putstr("My Page")
 
-    @single_lcd_write
+    @single_lcd_write  # type: ignore[misc]
     def display_temporary(
         self,
         first_line: Optional[str] = None,
         second_line: Optional[str] = None,
-        duration: int = 1,  # in s
-    ):
+        duration: int = 1,
+    ) -> None:
+        """Temporarily display one or two lines then pause.
+
+        Parameters
+        ----------
+        first_line:
+            Text for line 0.
+        second_line:
+            Text for line 1 (optional).
+        duration:
+            Time in seconds to keep the message visible.
+        """
         self.lcd.clear()
         if first_line is not None:
             self.lcd.move_to(0, 0)
@@ -76,16 +89,14 @@ class Page:
 
 
 class BasePage(Page):
-    """
-    Default home page displayed when the application starts or times out.
-    """
+    """Default home page displayed when the application starts or times out."""
 
     def __init__(self):
         super().__init__()
         self.has_timed_out = False
 
-    @single_lcd_write
-    def display(self):
+    @single_lcd_write  # type: ignore[misc]
+    def display(self) -> None:
         self.lcd.move_to(0, 0)
         self.lcd.putstr("Bonjour !")
 
@@ -102,9 +113,7 @@ class BasePage(Page):
 
 
 class NameButtonPage(Page):
-    """
-    Interactive page for assigning names to physical buttons.
-    """
+    """Interactive page for assigning human-readable names to buttons."""
 
     values = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ") + [CUSTOM_CHARS_IDX["enter"]]
 
@@ -114,8 +123,8 @@ class NameButtonPage(Page):
         self.name = ""
         self.encoder_idx = 0
 
-    @single_lcd_write
-    def display(self):
+    @single_lcd_write  # type: ignore[misc]
+    def display(self) -> None:
         self.lcd.clear()
         self.lcd.move_to(0, 0)
         if not self.button_id:
@@ -131,8 +140,13 @@ class NameButtonPage(Page):
         self.encoder_idx = (self.encoder_idx + increment) % len(self.values)
 
     def encoder_button_callback(self) -> Optional["Page"]:
+        """Save name"""
         value = self.values[self.encoder_idx]
-        if (value == CUSTOM_CHARS_IDX["enter"]) and self.name:
+        if (
+            (value == CUSTOM_CHARS_IDX["enter"])
+            and self.name
+            and (self.button_id is not None)
+        ):
             print("Enter")
             with Database() as db:
                 db.add_user(button_id=self.button_id, name=self.name)
@@ -147,16 +161,14 @@ class NameButtonPage(Page):
 
 
 class PersonPage(Page):
-    """
-    Displays personalized greeting and coffee consumption statistics for a user.
-    """
+    """Display personalised greeting and consumption statistics for a user."""
 
     def __init__(self, button_id: int):
         super().__init__()
         self.button_id = button_id
 
-    @single_lcd_write
-    def display(self):
+    @single_lcd_write  # type: ignore[misc]
+    def display(self) -> None:
         with Database() as db:
             name = db.get_name(self.button_id)
             mugs = db.get_mugs(name)
@@ -168,7 +180,7 @@ class PersonPage(Page):
             mug for mug in mugs if mug["datetime"].date() == datetime.now().date()
         ]
         n = len(mugs_today)
-        mug_str = "tasse" if n<2 else "tasses"
+        mug_str = "tasse" if n < 2 else "tasses"
         volume_today = sum(mug["value"] for mug in mugs_today)
 
         message = f"Ajd: {n} {mug_str} - {int(volume_today)} mL"
@@ -179,9 +191,7 @@ class PersonPage(Page):
 
 
 class MugPage(Page):
-    """
-    Handles mug serving workflow - displays mug weight and assigns to users.
-    """
+    """Handle mug serving workflow, weight assignment and validation."""
 
     def __init__(
         self, mug_value: Optional[float] = None, person_ids: Optional[List[int]] = None
@@ -189,10 +199,10 @@ class MugPage(Page):
         super().__init__()
         self.mug_value = mug_value
         self.person_ids = person_ids if person_ids is not None else []
-        self.timeout = 5 # shorter timeout here
+        self.timeout = 5  # shorter timeout here
 
     @single_lcd_write
-    def display(self):
+    def display(self) -> None:
         if self.mug_value is None:
             # Pot is removed
             print("Service...")
@@ -233,41 +243,41 @@ class MugPage(Page):
         if self.person_ids:
             self.encoder_button_callback()
 
-class ShutdownPage(Page):
 
-    def __init__(self, restart: bool=False):
+class ShutdownPage(Page):
+    """Page used to trigger system shutdown or restart."""
+
+    def __init__(self, restart: bool = False):
         self.restart = restart
 
     @single_lcd_write
-    def display(self):
+    def display(self) -> None:
         if self.restart:
             self.display_temporary("Restart ...", duration=2)
             os.system("sudo shutdown -r now")
-        else:    
+        else:
             self.display_temporary("Shutdown ...", duration=2)
             self.lcd.turn_off()
             os.system("sudo shutdown -h now")
 
+
 class StatsPage(Page):
-    """
-    Aggregated stats
-    """
+    """Display aggregated statistics (total mugs and volume)."""
 
     def __init__(self):
         with Database() as db:
             self.stats = db.get_sum()
 
     @single_lcd_write
-    def display(self):
+    def display(self) -> None:
         self.display_temporary(
             f"{self.stats['count']} tasses",
-            f"{1e-3*self.stats['sum']:.2f} L",
+            f"{1e-3 * self.stats['sum']:.2f} L",
         )
 
+
 class MenuPage(Page):
-    """
-    Main menu for administrative functions like naming buttons and viewing stats.
-    """
+    """Main menu listing administrative / utility pages."""
 
     PAGES = [
         dict(name="Nommer bouton", page=NameButtonPage()),
@@ -281,7 +291,7 @@ class MenuPage(Page):
         self.encoder_idx = 0
 
     @single_lcd_write
-    def display(self):
+    def display(self) -> None:
         self.lcd.move_to(0, 0)
         self.lcd.putstr("Menu...")
         self.lcd.move_to(0, 1)

@@ -1,5 +1,12 @@
+"""MCP23017 based button multiplexer.
+
+This module abstracts a matrix of momentary buttons connected through an
+MCP23017 I/O expander. An interrupt pin notifies when any button changes and
+the pressed button id (0..15) is resolved from interrupt flags.
+"""
+
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional, Protocol
 
 import smbus
 from gpiozero import Button, Device
@@ -10,6 +17,10 @@ from mcp23017.i2c import I2C
 from coffee.app.page import Page
 
 Device.pin_factory = PiGPIOFactory()
+
+
+class ButtonCallback(Protocol):
+    def __call__(self, button_id: int) -> Optional[Page]: ...  # pragma: no cover
 
 
 class Multiplex:
@@ -24,7 +35,7 @@ class Multiplex:
         self,
         address: int = 0x20,
         interrupt_pin: int = 4,
-        button_callback: Optional[Callable[[int], Page | None]] = None,
+        button_callback: Optional[ButtonCallback] = None,
     ):
         self.button = Button(interrupt_pin, pull_up=True, bounce_time=0.2)
         self.i2c = I2C(smbus.SMBus(1))
@@ -70,10 +81,8 @@ class Multiplex:
         self.button.close()
 
     def get_pressed_button_id(
-        self, 
-        flags_a: List[str], flags_b: List[str],
+        self, flags_a: List[str], flags_b: List[str]
     ) -> Optional[int]:
-
         flags = flags_a + flags_b
         try:
             return flags.index("1")
@@ -103,7 +112,5 @@ class Multiplex:
             if self.button_callback is not None:
                 self.button_callback(pressed_id)
 
-    def set_button_callback(
-        self, button_callback: Optional[Callable[[int, Dict[int, int]], Page | None]]
-    ):
+    def set_button_callback(self, button_callback: Optional[ButtonCallback]) -> None:
         self.button_callback = button_callback

@@ -1,6 +1,15 @@
+"""LCD helper abstractions.
+
+Provides a thin wrapper around the third-party :class:`I2cLcd` to add:
+
+* Thread-safe scrolling messages
+* Blinking backlight messages
+* A decorator to cancel any previous animation before drawing new content
+"""
+
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import wrapt
 from lcd.i2c_lcd import I2cLcd
@@ -11,7 +20,7 @@ from coffee.config import CUSTOM_CHARS
 @wrapt.decorator
 def single_lcd_write(
     wrapped: Callable, instance: Any, args: tuple, kwargs: dict
-) -> Any:
+) -> Any:  # type: ignore[override]
     """
     Decorator to ensure single LCD write operations by managing LCD threads.
 
@@ -58,10 +67,9 @@ class LCD(I2cLcd):
         num_columns: int = 2,
     ) -> None:
         """
-        Initialize the LCD with enhanced capabilities.
+        Initialize the LCD
 
         Args:
-            power_pin: set if a MOSFET powers the device
             port: I2C port number
             i2c_addr: I2C address of the LCD
             num_lines: Number of lines on the LCD
@@ -113,8 +121,8 @@ class LCD(I2cLcd):
         self.lcd_thread = threading.Thread(target=worker, daemon=True)
         self.lcd_thread.start()
 
-    #@single_lcd_write
-    def blink(self, message:str, interval: float = 0.5, n: int = -1) -> None:
+    # @single_lcd_write
+    def blink(self, message: str, interval: float = 0.5, n: int = -1) -> None:
         """
         Blink the LCD backlight with a service message.
 
@@ -140,13 +148,13 @@ class LCD(I2cLcd):
         self.lcd_thread.start()
 
     @single_lcd_write
-    def turn_off(self):
+    def turn_off(self) -> None:
         self.clear()
         self.display_off()
         self.backlight_off()
 
     @single_lcd_write
-    def turn_on(self):
+    def turn_on(self) -> None:
         self.clear()
         self.display_on()
         self.backlight_on()

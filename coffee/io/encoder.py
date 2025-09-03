@@ -1,4 +1,11 @@
-from typing import Callable, Optional
+"""Rotary encoder input abstraction.
+
+Provides a higher-level interface around GPIO events for a quadrature rotary
+encoder plus two push buttons (encoder button + red/cancel button). External
+callbacks can be registered to react to rotations or button presses.
+"""
+
+from typing import Optional, Protocol
 
 from gpiozero import Button, Device
 from gpiozero.pins.pigpio import PiGPIOFactory
@@ -6,6 +13,14 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 from coffee.app.page import Page
 
 Device.pin_factory = PiGPIOFactory()
+
+
+class RotationCallback(Protocol):
+    def __call__(self, clockwise: bool) -> Optional[Page]: ...  # pragma: no cover
+
+
+class ButtonCallback(Protocol):
+    def __call__(self) -> Optional[Page]: ...  # pragma: no cover
 
 
 class Encoder:
@@ -22,9 +37,9 @@ class Encoder:
         data_pin: int,
         encoder_button_pin: Optional[int] = None,
         red_button_pin: Optional[int] = None,
-        encoder_callback: Optional[Callable[[bool], Page | None]] = None,
-        encoder_button_callback: Optional[Callable[[], Page | None]] = None,
-        red_button_callback: Optional[Callable[[], Page | None]] = None,
+        encoder_callback: Optional[RotationCallback] = None,
+        encoder_button_callback: Optional[ButtonCallback] = None,
+        red_button_callback: Optional[ButtonCallback] = None,
     ):
         # Rotary encoder pins (pulldown)
         self.clk_pin = Button(clk_pin, pull_up=False)
@@ -41,29 +56,20 @@ class Encoder:
         self.data_pin.when_pressed = self.transition
         self.data_pin.when_released = self.transition
 
-        # Optional classical buttons (pull-up)
-        self.encoder_button = None
-        self.red_button = None
+        # Classical buttons
+        self.encoder_button = Button(encoder_button_pin, pull_up=True, bounce_time=0.05)
+        if encoder_button_callback:
+            self.encoder_button.when_pressed = encoder_button_callback
 
-        if encoder_button_pin is not None:
-            self.encoder_button = Button(
-                encoder_button_pin, pull_up=True, bounce_time=0.05
-            )
-            if encoder_button_callback:
-                self.encoder_button.when_pressed = encoder_button_callback
-
-        if red_button_pin is not None:
-            self.red_button = Button(red_button_pin, pull_up=True, bounce_time=0.05)
-            if red_button_callback:
-                self.red_button.when_pressed = red_button_callback
+        self.red_button = Button(red_button_pin, pull_up=True, bounce_time=0.05)
+        if red_button_callback:
+            self.red_button.when_pressed = red_button_callback
 
     def cleanup(self):
         self.clk_pin.close()
         self.data_pin.close()
-        if self.encoder_button is not None:
-            self.encoder_button.close()
-        if self.red_button is not None:
-            self.red_button.close()
+        self.encoder_button.close()
+        self.red_button.close()
 
     def transition(self) -> None:
         """
@@ -90,20 +96,21 @@ class Encoder:
             self.encoder_callback(self.direction == "L")
         self.state = newState
 
-    def get_value(self):
+    def get_value(self) -> int:
+        """Return the raw internal value (currently unused incrementally)."""
         return self.value
 
     def set_encoder_callback(
-        self, encoder_callback: Optional[Callable[[bool], Page | None]]
-    ):
+        self, encoder_callback: Optional[RotationCallback]
+    ) -> None:
         self.encoder_callback = encoder_callback
 
     def set_encoder_button_callback(
-        self, encoder_button_callback: Optional[Callable[[], Page | None]]
-    ):
+        self, encoder_button_callback: Optional[ButtonCallback]
+    ) -> None:
         self.encoder_button.when_pressed = encoder_button_callback
 
     def set_red_button_callback(
-        self, red_button_callback: Optional[Callable[[], Page | None]]
-    ):
+        self, red_button_callback: Optional[ButtonCallback]
+    ) -> None:
         self.red_button.when_pressed = red_button_callback

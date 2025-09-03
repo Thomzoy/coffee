@@ -1,8 +1,7 @@
 #! /home/dietpi/coffee/.venv//bin/activate
 
-import time
-from threading import Event
 import signal
+from threading import Event
 
 from coffee.app.app import LCDApp
 from coffee.io.encoder import Encoder
@@ -10,7 +9,6 @@ from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
 
 if __name__ == "__main__":
-
     app = LCDApp()
 
     encoder = Encoder(
@@ -37,7 +35,7 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGTERM, quit)
     signal.signal(signal.SIGINT, quit)
-    signal.signal(signal.SIGHUP, quit)        
+    signal.signal(signal.SIGHUP, quit)
 
     try:
         scale.start_reading()

@@ -1,0 +1,30 @@
+[project]
+name = "coffee"
+version = "0.1.0"
+description = "EDS-Coffee"
+authors = [
+    {name = "Thomas Petit-Jean", email = "thom.petitjean@hotmail.fr" }
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+	"python_lcd @ git+https://github.com/dhylands/python_lcd.git",
+    "gpiozero",
+    "mcp23017",
+    "RPi.GPIO",
+    "wrapt",
+]
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.20.0",
+]
+scale = [
+    "hx711-rpi-py" # Optional since it requires a built C++ lib
+]
+
+[tool.setuptools]
+packages = ["coffee"]
+

@@ -62,7 +62,7 @@ Clone the repository and install in development mode:
 ```bash
 git clone https://github.com/Thomzoy/coffee.git
 cd coffee
-pip install -e ".[docs]"
+pip install -e ".[docs,pi]"
 ```
 
 ## Hardware Setup

@@ -17,3 +17,6 @@ NUM_SCALE_READINGS = 5
 
 # Number of median (from above) scale values to compute STD on to fetch a stable value
 LEN_SCALE_BUFFER = 3
+
+# Default timeout duration (number of s before LCD goes back to main page)
+DEFAULT_LCD_TIMEOUT = 10

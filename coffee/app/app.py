@@ -15,7 +15,7 @@ from time import time
 from typing import Any, Callable, List, Optional
 
 from coffee.app.page import BasePage, MugPage, Page
-from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION
+from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION, DEFAULT_LCD_TIMEOUT
 from coffee.io.encoder import Encoder
 from coffee.io.lcd import LCD
 from coffee.io.multiplex import Multiplex
@@ -67,7 +67,7 @@ class LCDApp:
         rows: int = 2,
         width: int = 16,
         page: Optional[Page] = None,
-        timeout: int = 15,
+        timeout: int = DEFAULT_LCD_TIMEOUT,
     ) -> None:
         """Initialize the LCD application.
 

@@ -216,7 +216,7 @@ class MugPage(Page):
                 with Database() as db:
                     names = [db.get_name(person_id) for person_id in self.person_ids]
                 message = " + ".join(names)
-                self.lcd.scroll_message(message, row=1, sleep=0.1)
+                self.lcd.scroll_message(message, row=1, sleep=0.15)
 
     def person_button_callback(self, button_id: int) -> Optional["Page"]:
         if button_id not in self.person_ids:

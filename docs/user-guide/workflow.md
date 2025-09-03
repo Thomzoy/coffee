@@ -20,21 +20,22 @@
 
 4. **Press person button(s)** to assign coffee
 
-   You can click multiple persons to evenly split the mug volume.
-   ```
-   ┌────────────────┐
-   │ 245mL - Qui ?  │
-   │    A + B       │
-   └────────────────┘
-   ```
+You can click multiple persons to evenly split the mug volume.
+```
+┌────────────────┐
+│ 245mL - Qui ?  │
+│    A + B       │
+└────────────────┘
+```
 
-   !!! tip "Pre-assigning"
-       You can also press button(s) up to 15s before serving coffee to pre-assign them.
-       When doing so, you can still add other person(s) after service
 
-   !!! tip "Canceling"
-      If a user was added by mistake, press the red button to remove the last added user.
-      To fully cancel (i.e. to not save the mug), press the red button until no more user is registered
+!!! tip "Pre-assigning"
+    You can also press button(s) up to 15s before serving coffee to pre-assign them.  
+    When doing so, you can still add other person(s) after service
+
+!!! tip "Canceling"
+    If a user was added by mistake, press the red button to remove the last added user.
+    To fully cancel (i.e. to not save the mug), press the red button until no more user is registered
 
 5. **Press encoder button or simply wait** to save
 

@@ -17,4 +17,3 @@ NUM_SCALE_READINGS = 5
 
 # Number of median (from above) scale values to compute STD on to fetch a stable value
 LEN_SCALE_BUFFER = 3
-

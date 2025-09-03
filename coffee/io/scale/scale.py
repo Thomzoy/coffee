@@ -1,14 +1,17 @@
-import time
-import statistics
-import threading
+"""High level scale abstraction built atop HX711 readings.
+
+Reads weights in a background process to avoid blocking the main UI thread
+and detects pot removal / replacement events as well as mug serving events.
+"""
+
 import multiprocessing as mp
-from collections import deque
-from typing import Any, Callable, Literal, Optional
+import statistics
+from typing import Any, Callable, List, Optional
 
 import HX711
 
 from coffee.app.page import Page
-from coffee.config import POT_WEIGHT_THRESHOLD, NUM_SCALE_READINGS, LEN_SCALE_BUFFER
+from coffee.config import LEN_SCALE_BUFFER, NUM_SCALE_READINGS, POT_WEIGHT_THRESHOLD
 
 
 class Scale:
@@ -23,18 +26,17 @@ class Scale:
         self,
         data_pin: int = 17,
         clock_pin: int = 27,
-        reference_unit: int = 304, # Value obtained by weighting a known weight
-        offset: int = 1581736, # We don't care since we only measure delta
+        reference_unit: int = 304,  # Value obtained by weighting a known weight
+        offset: int = 1581736,  # We don't care since we only measure delta
         served_mug_callback: Optional[Callable[[float], Page | None]] = None,
         removed_pot_callback: Optional[Callable[[], Page | None]] = None,
     ):
-
         self.served_mug_callback: Optional[Callable[[float], Page | None]] = (
-            served_mug_callback
-        ) # Called when meaningful mug value is measured
+            served_mug_callback  # Called when meaningful mug value is measured
+        )
         self.removed_pot_callback: Optional[Callable[[], Page | None]] = (
-            removed_pot_callback
-        ) # Called when pot is removed from the scale
+            removed_pot_callback  # Called when pot is removed from the scale
+        )
 
         self.hx = HX711.SimpleHX711(
             data_pin,
@@ -46,15 +48,17 @@ class Scale:
         self.hx.setUnit(HX711.Mass.Unit.G)
         self.hx.zero()
 
-        self.has_pot = True # Flag to store if pot is on the scale or not
-        self.update_mug_value = False # Flag to tell if the weight of the mug should be measured
-        self.stable_value = 0 # Last stable measured weight
-        self.mug_value = 0 # Last measured mug value
+        self.has_pot = True  # Flag to store if pot is on the scale or not
+        self.update_mug_value = (
+            False  # Flag to tell if the weight of the mug should be measured
+        )
+        self.stable_value = 0  # Last stable measured weight
+        self.mug_value = 0  # Last measured mug value
 
         # Signal for particular events
         self.signals = dict(
-            POT_OFF = mp.Event(), # Pot is off    
-            POT_ON = mp.Event(), # Pot is back on
+            POT_OFF=mp.Event(),  # Pot is off
+            POT_ON=mp.Event(),  # Pot is back on
         )
         for signal in self.signals.values():
             signal.set()
@@ -64,7 +68,15 @@ class Scale:
         self.stop_event = mp.Event()
 
     @staticmethod
-    def writer(stack, hx, signals, stop_event):
+    def writer(
+        stack: List[float],
+        hx: HX711.SimpleHX711,
+        signals: dict[str, mp.Event],
+        stop_event: mp.Event,
+    ):
+        """
+        Continuous loop to read weight.
+        """
         while not stop_event.is_set():
             with mp.Lock():
                 value = float(hx.weight(NUM_SCALE_READINGS))
@@ -76,29 +88,35 @@ class Scale:
                 elif delta >= POT_WEIGHT_THRESHOLD:
                     # Big positive weight difference: pot is back
                     signal = signals["POT_ON"]
-                
+
                 if len(stack) >= LEN_SCALE_BUFFER:
                     stack.pop(0)  # discard oldest
                 stack.append(value)  # push new value
-            
+
             if signal is not None:
                 signal.clear()
                 signal.wait()
                 signal.set()
 
-    def start_reading(self):
+    def start_reading(self) -> None:
+        """
+        Run background reading process
+        """
         self.manager = mp.Manager()
         self.stack = self.manager.list()
 
         self.pw = mp.Process(
             target=Scale.writer,
-            args=(self.stack, self.hx, self.signals, self.stop_event)
+            args=(self.stack, self.hx, self.signals, self.stop_event),
         )
         self.pw.start()
 
-    def read(self):
+    def read(self) -> Optional[float]:
+        """
+        Single reading from the background process weight's stack
+        """
         readings = [v for v in self.stack]
-        if len(readings) < 2: # Only happens at beginning
+        if len(readings) < 2:  # Only happens at beginning
             return
 
         delta = readings[-1] - readings[-2]
@@ -119,10 +137,9 @@ class Scale:
 
         if self.has_pot:
             std = statistics.stdev(readings)
-            # print(f"Has pot, STD: {std}")
             if (std is not None) and (std <= 5):
+                # We have a stable reading
                 new_stable_value = statistics.mean(readings)
-                # print(f"New stable value: {new_stable_value}")
                 if self.update_mug_value:
                     self.mug_value = self.stable_value - new_stable_value
                     print(f"Mug {self.mug_value}")
@@ -135,8 +152,8 @@ class Scale:
 
         return self.mug_value
 
-    def stop_reading(self):
-        """Stop the sensor reading process"""
+    def stop_reading(self) -> None:
+        """Stop the sensor reading process and release resources."""
         self.stop_event.set()
         if self.pw is not None:
             print("Scale process terminate")
@@ -155,10 +172,10 @@ class Scale:
 
     def set_served_mug_callback(
         self, served_mug_callback: Optional[Callable[[float], Page | None]]
-    ):
+    ) -> None:
         self.served_mug_callback = served_mug_callback
 
     def set_removed_pot_callback(
         self, removed_pot_callback: Optional[Callable[[], Page | None]]
-    ):
+    ) -> None:
         self.removed_pot_callback: Optional[Callable[[], Any]] = removed_pot_callback

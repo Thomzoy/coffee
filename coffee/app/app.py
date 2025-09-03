@@ -1,7 +1,18 @@
-from time import time, sleep
-from typing import Any, Callable, Optional
+"""LCD application orchestration module.
 
-import wrapt
+This module defines the main application `LCDApp` which
+coordinates the LCD display, input devices (rotary encoder, buttons through
+multiplexer) and the scale events to provide an interactive coffee tracking
+user interface.
+
+All page transitions are centralized through the `set_page` decorator in
+order to guarantee consistent refresh, power management (turn on) and timeout
+reset.
+"""
+
+from functools import wraps
+from time import time
+from typing import Any, Callable, List, Optional
 
 from coffee.app.page import BasePage, MugPage, Page
 from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION
@@ -11,41 +22,43 @@ from coffee.io.multiplex import Multiplex
 from coffee.io.scale import Scale
 
 
-@wrapt.decorator
-def set_page(
-    wrapped: Callable, instance: Any, args: tuple, kwargs: dict
-) -> Optional[Page]:
-    """
-    Decorator to handle page transitions in the LCD app.
+def set_page(func: Callable[..., Optional[Page]]) -> Callable[..., Optional[Page]]:
+    """Decorator to handle page transitions in the LCD app.
 
-    Updates the display, sets the new page, and refreshes the screen.
+    The decorated callback may return a new `Page` instance (or
+    `None` to remain on the current page). This decorator centralizes the
+    logic to:
 
-    Args:
-        wrapped: The function being decorated
-        instance: The LCDApp instance
-        args: Positional arguments for the wrapped function
-        kwargs: Keyword arguments for the wrapped function
-
-    Returns:
-        The new page or None
+    1. Attach the LCD reference to the newly returned page
+    2. Turn the LCD on (it may have been turned off after a timeout)
+    3. Trigger a display refresh
+    4. Update the last interaction timestamp
     """
 
-    page = wrapped(*args, **kwargs)
+    @wraps(func)
+    def wrapper(self: "LCDApp", *args: Any, **kwargs: Any) -> Optional[Page]:
+        page = func(self, *args, **kwargs)
+        if page is not None:
+            self.page = page.set_lcd(self.lcd)
+        self.lcd.turn_on()
+        self.page.display()
+        self.last_update = int(time())
+        return page
 
-    if page is not None:
-        instance.page = page.set_lcd(instance.lcd)
-    instance.lcd.turn_on()
-    instance.page.display()
-    instance.last_update = int(time())
-
-    return page
+    return wrapper
 
 
 class LCDApp:
-    """
-    Main LCD application controller.
+    """Main LCD application controller.
 
-    Manages the LCD display, user input, and page navigation for the coffee machine interface.
+    This class brings together:
+
+    * The physical LCD (`LCD` instance)
+    * Optional input devices (rotary encoder, button multiplexer, scale)
+    * A stateful `Page` hierarchy for UI navigation
+
+    It also enforces inactivity timeouts to revert to the base page and powers
+    down the LCD after a period of no interaction.
     """
 
     def __init__(
@@ -55,16 +68,22 @@ class LCDApp:
         width: int = 16,
         page: Optional[Page] = None,
         timeout: int = 15,
-    ):
-        """
-        Initialize the LCD application.
+    ) -> None:
+        """Initialize the LCD application.
 
-        Args:
-            address: I2C address of the LCD
-            rows: Number of rows on the LCD
-            width: Number of columns on the LCD
-            page: Initial page to display (defaults to BasePage)
-            timeout: Timeout in seconds for automatic page reset
+        Parameters
+        ----------
+        address:
+            I2C address of the LCD backpack.
+        rows:
+            Number of visible rows (typically 2 or 4).
+        width:
+            Number of characters per row.
+        page:
+            Initial page instance (defaults to a new `BasePage`).
+        timeout:
+            Global inactivity timeout (seconds) used when a page does not
+            define its own ``timeout`` attribute.
         """
         self.lcd = LCD(1, address, rows, width)
         self.page = page if page is not None else BasePage().set_lcd(self.lcd)
@@ -80,14 +99,21 @@ class LCDApp:
         scale: Scale | None = None,
         multiplex: Multiplex | None = None,
         encoder: Encoder | None = None,
-    ):
-        """
-        Configure input devices for the LCD app.
+    ) -> None:
+        """Configure optional hardware input devices.
 
-        Args:
-            scale: Weight scale sensor
-            multiplex: Button multiplexer
-            encoder: Rotary encoder with buttons
+        Each provided device will have its callbacks registered so that UI
+        navigation and events (mug served, pot removed, button presses, rotary
+        turns) are routed through the application and page layer.
+
+        Parameters
+        ----------
+        scale:
+            Optional `Scale` instance used to detect pot removal / mug serving.
+        multiplex:
+            Optional `Multiplex` instance for person buttons.
+        encoder:
+            Optional `Encoder` instance for navigation and validation.
         """
         if scale is not None:
             self.scale = scale
@@ -100,21 +126,23 @@ class LCDApp:
 
         if encoder is not None:
             self.encoder = encoder
-            (self.encoder.set_encoder_callback(self.encoder_callback),)
-            (self.encoder.set_encoder_button_callback(self.encoder_button_callback),)
-            (self.encoder.set_red_button_callback(self.red_button_callback),)
+            self.encoder.set_encoder_callback(self.encoder_callback)
+            self.encoder.set_encoder_button_callback(self.encoder_button_callback)
+            self.encoder.set_red_button_callback(self.red_button_callback)
 
-    def display(self):
-        """Refresh the LCD display with the current page content."""
+    def display(self) -> None:
+        """Refresh the LCD with the current page content."""
         self.lcd.clear()
         self.page.display()
 
-    def check_timeout(self):
-        """Check if the current page has timed out and reset to base page if needed."""
-        if hasattr(self.page, "timeout") and self.page.timeout is not None:
-            timeout = self.page.timeout
-        else:
-            timeout = self.timeout
+    def check_timeout(self) -> None:
+        """Check page timeout and revert to base page / power-saving mode.
+
+        If the active page defines a ``timeout`` attribute it's used;
+        otherwise the application-wide default timeout is applied.
+        """
+        # Pages may optionally define a "timeout" attribute (in seconds)
+        timeout: int = getattr(self.page, "timeout", self.timeout) or self.timeout
         if int(time()) - self.last_update >= timeout:
             self.page.timeout_callback()
             if not isinstance(self.page, BasePage):
@@ -124,48 +152,68 @@ class LCDApp:
                 self.page.display()
 
     @set_page
-    def encoder_callback(self, clockwise: bool):
-        """When the rotary encoder is turned (clockwise or counterclockwise)"""
+    def encoder_callback(self, clockwise: bool) -> Optional[Page]:
+        """Rotary encoder rotation event.
+
+        Parameters
+        ----------
+        clockwise:
+            ``True`` if the physical rotation is clockwise, else counterclockwise.
+        """
         print(f"Encoder - Clockwise {clockwise} - Page {self.page.__class__.__name__}")
         return self.page.encoder_callback(clockwise)
 
     @set_page
-    def encoder_button_callback(self):
-        """When the rotary encoder is pressed"""
+    def encoder_button_callback(self) -> Optional[Page]:
+        """Rotary encoder push button event."""
         print(f"Encoder button - Page {self.page.__class__.__name__}")
         return self.page.encoder_button_callback()
 
     @set_page
-    def red_button_callback(self):
-        """When the red button is pressed"""
+    def red_button_callback(self) -> Optional[Page]:
+        """Red (cancel) button event."""
         print(f"Red button - Page {self.page.__class__.__name__}")
         return self.page.red_button_callback()
 
     @set_page
-    def person_button_callback(self, button_id):
-        """When a person button is pressed"""
+    def person_button_callback(self, button_id: int) -> Optional[Page]:
+        """Person button event.
+
+        Parameters
+        ----------
+        button_id:
+            Zero-based index of the pressed person button.
+        """
         print(
             f"Person button callback - ID {button_id} - Page {self.page.__class__.__name__}"
         )
         return self.page.person_button_callback(button_id)
 
     @set_page
-    def served_mug_callback(self, mug_value: float):
-        """When a new mug is served"""
+    def served_mug_callback(self, mug_value: float) -> Optional[Page]:
+        """A new mug has been detected by the scale.
+
+        Parameters
+        ----------
+        mug_value:
+            Mug weight in grams reported by the scale.
+        """
         print(f"New mug - {mug_value} g")
-        if MUG_BUTTON_LOOKBEHIND_DURATION:
-            # We get all press that occured in the past
+        recent_button_presses: List[int] = []
+        if MUG_BUTTON_LOOKBEHIND_DURATION and self.multiplex is not None:
+            # Gather button presses that occurred within the look-behind window
             now = time()
             recent_button_presses = [
                 person_id
                 for person_id, timestamp in self.multiplex.state.items()
                 if now - timestamp < MUG_BUTTON_LOOKBEHIND_DURATION
             ]
-            print(f"Including: {recent_button_presses}")
+            if recent_button_presses:
+                print(f"Including: {recent_button_presses}")
         return MugPage(mug_value=mug_value, person_ids=recent_button_presses)
 
     @set_page
-    def removed_pot_callback(self):
-        """When a pot is removed"""
+    def removed_pot_callback(self) -> Optional[Page]:
+        """Pot removed event (start of serving workflow)."""
         print("Pot removed")
         return MugPage()

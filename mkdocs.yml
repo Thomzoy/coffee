@@ -37,6 +37,7 @@ theme:
 
 plugins:
   - search
+  - autorefs
   - mkdocstrings:
       handlers:
         python:
@@ -70,22 +71,21 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started:
-    - Installation: getting-started/installation.md
-    - Hardware Setup: getting-started/hardware-setup.md
-    - Quick Start: getting-started/quick-start.md
+  - User Guide:
+    - Main principles: user-guide/principles.md
+    - Possible LCD pages: user-guide/pages.md
+    - Workflow: user-guide/workflow.md
+    - Troubleshooting: user-guide/troubleshooting.md
+  - Setup:
+    - Hardware Setup: setup/hardware-setup.md
+    - Installation: setup/installation.md
   - Architecture:
-    - Overview: architecture/overview.md
     - Components: architecture/components.md
-    - Data Flow: architecture/data-flow.md
+    - Application: architecture/application.md
   - API Reference:
     - App Module: api/app.md
     - IO Module: api/io.md
     - Configuration: api/config.md
-  - User Guide:
-    - Using the Interface: user-guide/interface.md
-    - Calibration: user-guide/calibration.md
-    - Troubleshooting: user-guide/troubleshooting.md
 
 extra:
   social:

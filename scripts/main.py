@@ -32,7 +32,7 @@ if __name__ == "__main__":
     exit = Event()
 
     def quit(signo, _frame):
-        print("Interrupted by %d, shutting down" % signo)
+        print(f"Interrupted by {signo}, shutting down")
         exit.set()
 
     signal.signal(signal.SIGTERM, quit)
@@ -55,4 +55,3 @@ if __name__ == "__main__":
         multiplex.cleanup()
         print("Encoder cleanup")
         encoder.cleanup()
-        #GPIO.cleanup()

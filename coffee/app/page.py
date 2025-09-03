@@ -82,7 +82,7 @@ class BasePage(Page):
 
     def __init__(self):
         super().__init__()
-        self.has_timeout = False
+        self.has_timed_out = False
 
     @single_lcd_write
     def display(self):
@@ -96,8 +96,8 @@ class BasePage(Page):
         return PersonPage(button_id)
 
     def timeout_callback(self) -> Optional["Page"]:
-        if not self.has_timeout:
-            self.has_timeout = True
+        if not self.has_timed_out:
+            self.has_timed_out = True
             self.lcd.turn_off()
 
 
@@ -189,7 +189,7 @@ class MugPage(Page):
         super().__init__()
         self.mug_value = mug_value
         self.person_ids = person_ids if person_ids is not None else []
-        self.timeout = 10 # shorter timeout here
+        self.timeout = 5 # shorter timeout here
 
     @single_lcd_write
     def display(self):

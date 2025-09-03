@@ -125,21 +125,25 @@ class LCDApp:
 
     @set_page
     def encoder_callback(self, clockwise: bool):
+        """When the rotary encoder is turned (clockwise or counterclockwise)"""
         print(f"Encoder - Clockwise {clockwise} - Page {self.page.__class__.__name__}")
         return self.page.encoder_callback(clockwise)
 
     @set_page
     def encoder_button_callback(self):
+        """When the rotary encoder is pressed"""
         print(f"Encoder button - Page {self.page.__class__.__name__}")
         return self.page.encoder_button_callback()
 
     @set_page
     def red_button_callback(self):
+        """When the red button is pressed"""
         print(f"Red button - Page {self.page.__class__.__name__}")
         return self.page.red_button_callback()
 
     @set_page
     def person_button_callback(self, button_id):
+        """When a person button is pressed"""
         print(
             f"Person button callback - ID {button_id} - Page {self.page.__class__.__name__}"
         )
@@ -147,8 +151,10 @@ class LCDApp:
 
     @set_page
     def served_mug_callback(self, mug_value: float):
+        """When a new mug is served"""
         print(f"New mug - {mug_value} g")
         if MUG_BUTTON_LOOKBEHIND_DURATION:
+            # We get all press that occured in the past
             now = time()
             recent_button_presses = [
                 person_id
@@ -160,4 +166,6 @@ class LCDApp:
 
     @set_page
     def removed_pot_callback(self):
+        """When a pot is removed"""
+        print("Pot removed")
         return MugPage()

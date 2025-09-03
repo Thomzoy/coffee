@@ -106,7 +106,7 @@ class LCD(I2cLcd):
             self.hide_cursor()
             self.move_to(0, row)
 
-            n = self.num_lines - 1
+            n = 15
             tmp_message = (n + 1) * " " + message + (n + 1) * " "
 
             for idx in range(n + 2 + len(message)):

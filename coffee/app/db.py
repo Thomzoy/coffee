@@ -119,10 +119,10 @@ class Database:
 
         return result
 
-    def get_name(self, button_id: int) -> str:
+    def get_name(self, button_id: int) -> str | int:
         """
         Return the most recent name associated with a given button_id.
-        Returns str(button_id) if no user is found.
+        Returns button_id if no user is found.
         """
         cursor = self.conn.cursor()
         cursor.execute(
@@ -136,7 +136,7 @@ class Database:
             (button_id,),
         )
         row = cursor.fetchone()
-        return row[0] if row else str(button_id)
+        return row[0] if row else button_id
 
     def get_sum(self) -> dict:
         """

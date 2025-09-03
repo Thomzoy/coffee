@@ -214,7 +214,7 @@ class MugPage(Page):
 
             if self.person_ids:
                 with Database() as db:
-                    names = [db.get_name(person_id) for person_id in self.person_ids]
+                    names = [str(db.get_name(person_id)) for person_id in self.person_ids]
                 message = " + ".join(names)
                 self.lcd.scroll_message(message, row=1, sleep=0.15)
 

@@ -6,7 +6,7 @@ person info, mug serving workflow, etc.). Pages may return a new page object
 from any callback method to trigger a navigation transition.
 """
 
-import os
+import subprocess
 import time
 from datetime import datetime
 from typing import List, Optional
@@ -71,7 +71,7 @@ class Page:
         time.sleep(duration)
 
     def timeout_callback(self) -> Optional["Page"]:
-        self.display_temporary("Retour...")
+        return self.red_button_callback()
 
     def encoder_callback(self, clockwise: bool) -> Optional["Page"]:
         pass
@@ -80,20 +80,20 @@ class Page:
         pass
 
     def red_button_callback(self) -> Optional["Page"]:
-        print("Cancel ...")
-        self.display_temporary("Cancel ...")
-        return BasePage()
+        print("Retour ...")
+        self.display_temporary("Retour ...")
+        return HomePage()
 
     def person_button_callback(self, button_id: int) -> Optional["Page"]:
         pass
 
 
-class BasePage(Page):
+class HomePage(Page):
     """Default home page displayed when the application starts or times out."""
 
     def __init__(self):
         super().__init__()
-        self.has_timed_out = False
+        #self.has_timed_out = False
 
     @single_lcd_write  # type: ignore[misc]
     def display(self) -> None:
@@ -107,9 +107,9 @@ class BasePage(Page):
         return PersonPage(button_id)
 
     def timeout_callback(self) -> Optional["Page"]:
-        if not self.has_timed_out:
-            self.has_timed_out = True
-            self.lcd.turn_off()
+        #if not self.has_timed_out:
+            #self.has_timed_out = True
+        self.lcd.turn_off()
 
 
 class NameButtonPage(Page):
@@ -228,7 +228,7 @@ class MugPage(Page):
                 for person_id in self.person_ids:
                     db.add_mug(person_id, self.mug_value / len(self.person_ids))
             self.display_temporary("OK !", duration=2)
-        return BasePage()
+        return HomePage()
 
     def red_button_callback(self) -> Optional["Page"]:
         # Remove all person recorded for the current mug (if any)
@@ -237,7 +237,7 @@ class MugPage(Page):
             self.person_ids = self.person_ids[:-1]
         else:
             self.display_temporary("Annule tasse...")
-            return BasePage()
+            return HomePage()
 
     def timeout_callback(self) -> Optional["Page"]:
         if self.person_ids:
@@ -254,12 +254,22 @@ class ShutdownPage(Page):
     def display(self) -> None:
         if self.restart:
             self.display_temporary("Restart ...", duration=2)
-            os.system("sudo shutdown -r now")
+            subprocess.check_output("sudo shutdown -r now", shell=True, text=True)
         else:
             self.display_temporary("Shutdown ...", duration=2)
             self.lcd.turn_off()
-            os.system("sudo shutdown -h now")
+            subprocess.check_output("sudo shutdown -h now", shell=True, text=True)
 
+class HostnamePage(Page):
+    """Show hostname"""
+
+    @single_lcd_write
+    def display(self) -> None:
+        try:
+            message = subprocess.check_output("hostname -I", shell=True, text=True).strip()
+        except subprocess.CalledProcessError as e:
+            message = f"Error {e.returncode}"
+        self.display_temporary("Hostname:", message, duration=10)
 
 class StatsPage(Page):
     """Display aggregated statistics (total mugs and volume)."""
@@ -282,6 +292,7 @@ class MenuPage(Page):
     PAGES = [
         dict(name="Nommer bouton", page=NameButtonPage()),
         dict(name="Stats", page=StatsPage()),
+        dict(name="Host name", page=HostnamePage()),
         dict(name="Eteindre", page=ShutdownPage()),
         dict(name="Redemarrer", page=ShutdownPage(restart=True)),
     ]

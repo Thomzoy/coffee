@@ -53,3 +53,5 @@ if __name__ == "__main__":
         multiplex.cleanup()
         print("Encoder cleanup")
         encoder.cleanup()
+        print("LCD cleanup")
+        app.lcd.turn_off()

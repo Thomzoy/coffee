@@ -14,7 +14,7 @@ from functools import wraps
 from time import time
 from typing import Any, Callable, List, Optional
 
-from coffee.app.page import BasePage, MugPage, Page
+from coffee.app.page import HomePage, MugPage, Page
 from coffee.config import MUG_BUTTON_LOOKBEHIND_DURATION, DEFAULT_LCD_TIMEOUT
 from coffee.io.encoder import Encoder
 from coffee.io.lcd import LCD
@@ -43,6 +43,7 @@ def set_page(func: Callable[..., Optional[Page]]) -> Callable[..., Optional[Page
         self.lcd.turn_on()
         self.page.display()
         self.last_update = int(time())
+        self.has_timed_out = False
         return page
 
     return wrapper
@@ -80,16 +81,19 @@ class LCDApp:
         width:
             Number of characters per row.
         page:
-            Initial page instance (defaults to a new `BasePage`).
+            Initial page instance (defaults to a new `HomePage`).
         timeout:
             Global inactivity timeout (seconds) used when a page does not
             define its own ``timeout`` attribute.
         """
         self.lcd = LCD(1, address, rows, width)
-        self.page = page if page is not None else BasePage().set_lcd(self.lcd)
+        self.page = page if page is not None else HomePage().set_lcd(self.lcd)
+
         self.timeout = timeout
         self.last_update = int(time())
+        self.has_timed_out = False
         self.is_on = True
+
         self.scale: Scale | None = None
         self.multiplex: Multiplex | None = None
         self.encoder: Encoder | None = None
@@ -143,13 +147,26 @@ class LCDApp:
         """
         # Pages may optionally define a "timeout" attribute (in seconds)
         timeout: int = getattr(self.page, "timeout", self.timeout) or self.timeout
-        if int(time()) - self.last_update >= timeout:
-            self.page.timeout_callback()
-            if not isinstance(self.page, BasePage):
-                print("Timeout")
+        if (not self.has_timed_out) and int(time()) - self.last_update >= timeout:
+            was_home_page = isinstance(self.page, HomePage)
+            self.timeout_callback()
+            if was_home_page:
+                # Timeout on home page = turn off screen
                 self.lcd.turn_off()
-                self.page = BasePage().set_lcd(self.lcd)
-                self.page.display()
+                self.has_timed_out = True
+            else:
+                # New timeout to later turn off screen
+                self.has_timed_out = False
+            # if not isinstance(self.page, HomePage):
+            #   print("Timeout")
+            #   self.lcd.turn_off()
+            #   self.page = HomePage().set_lcd(self.lcd)
+            #   self.page.display()
+
+    @set_page
+    def timeout_callback(self) -> Optional[Page]:
+        print("Timeout")
+        return self.page.timeout_callback()
 
     @set_page
     def encoder_callback(self, clockwise: bool) -> Optional[Page]:

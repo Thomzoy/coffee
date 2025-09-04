@@ -72,7 +72,7 @@ Shows the total number (sum on all users) of mugs served, and total volume
     - Red button → Return to home
     - Timeout → Automatic return to home
 
-### ShutdownPage
+### HomePage
 
 Turn the Raspberry off
 
@@ -95,6 +95,18 @@ Restart the Raspberry
 ┌────────────────┐
 │ Restart ...    │
 │                │
+└────────────────┘
+```
+
+### HostnamePage
+
+
+Displays the hostname
+
+```
+┌────────────────┐
+│ Hostname       │
+│ 192.168.1.10   │
 └────────────────┘
 ```
 

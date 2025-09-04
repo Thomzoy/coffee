@@ -21,7 +21,7 @@ class LCDApp:
         self.scale = Scale()
         self.multiplex = Multiplex()
         self.encoder = Encoder()
-        self.page = BasePage()
+        self.page = HomePage()
         
     def setup_callbacks(self):
         """Register hardware event callbacks"""

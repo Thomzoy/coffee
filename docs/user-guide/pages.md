@@ -98,6 +98,18 @@ Restart the Raspberry
 └────────────────┘
 ```
 
+### HostnamePage
+
+
+Displays the hostname
+
+```
+┌────────────────┐
+│ Hostname       │
+│ 192.168.1.10   │
+└────────────────┘
+```
+
 ## Person Page
 
 Displays information about a specific user when their button is pressed.

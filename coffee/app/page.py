@@ -127,7 +127,7 @@ class NameButtonPage(Page):
     def display(self) -> None:
         self.lcd.clear()
         self.lcd.move_to(0, 0)
-        if not self.button_id:
+        if self.button_id is None:
             self.lcd.putstr("Quel bouton ?")
         else:
             self.lcd.putstr(f"{self.button_id} - Quel nom ?")
